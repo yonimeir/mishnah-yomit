@@ -6,7 +6,12 @@ import {
   getTotalMishnayot,
   getMultiMasechetTotalUnits,
 } from '../data/mishnah-structure';
-import type { DistributionInfo } from '../services/scheduler';
+import {
+  calculateDistribution,
+  calculateByPaceScheduleMulti,
+  gematriya,
+  type DistributionInfo,
+} from '../services/scheduler';
 import { usePlanStore, type LearningPlan } from '../store/usePlanStore';
 
 interface PlanSettingsModalProps {
@@ -81,14 +86,27 @@ function PaceSettings({
   onClose: () => void;
 }) {
   const [newAmount, setNewAmount] = useState(plan.calculatedAmountPerDay);
+  const [strategy, setStrategy] = useState<'even' | 'tapered'>(plan.distribution?.strategy ?? 'tapered');
 
   const unitLabel = plan.unit === 'mishnah' ? 'משניות' : 'פרקים';
   const remaining = plan.totalUnits - plan.currentPosition;
 
+  // Compute new end date estimate with the new amount
   const newEstimate = useMemo(() => {
     if (remaining <= 0) return null;
-    return Math.ceil(remaining / newAmount);
+    const daysNeeded = Math.ceil(remaining / newAmount);
+    return daysNeeded;
   }, [newAmount, remaining]);
+
+  // Check if there's a remainder with the new amount across remaining days
+  const newDistribution = useMemo(() => {
+    if (!plan.targetDate || remaining <= 0) return null;
+    // Estimate remaining learning days to target date is complex; simplify to days based approach
+    const totalDays = remaining; // approximate - use remaining units / amount
+    // Actually for by_book we should recalculate properly, but simplest is just:
+    // user sets new amount, we recalc distribution from remaining
+    return null; // Distribution recalc is complex mid-plan; just change the flat amount
+  }, [newAmount, remaining, plan]);
 
   const hasChanged = newAmount !== plan.calculatedAmountPerDay;
 

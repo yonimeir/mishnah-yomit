@@ -26,7 +26,8 @@ function sefariaRefToUrl(ref: string): string {
     .replace(/ /g, '_');
 }
 
-async function fetchSefariaText(sefariaRef: string): Promise<MishnahText> {
+/** Fetch a single mishnah text */
+export async function fetchMishnahText(sefariaRef: string): Promise<MishnahText> {
   const cached = textCache.get(sefariaRef);
   if (cached) return cached;
 
@@ -53,9 +54,33 @@ async function fetchSefariaText(sefariaRef: string): Promise<MishnahText> {
   return result;
 }
 
-/** Fetch a single mishnah or an entire chapter */
-export const fetchMishnahText = fetchSefariaText;
-export const fetchChapter = fetchSefariaText;
+/** Fetch an entire chapter */
+export async function fetchChapter(sefariaRef: string): Promise<MishnahText> {
+  const cached = textCache.get(sefariaRef);
+  if (cached) return cached;
+
+  const urlRef = sefariaRefToUrl(sefariaRef);
+  const response = await fetch(`${BASE_URL}/${urlRef}?version=hebrew|all`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${sefariaRef}: ${response.statusText}`);
+  }
+
+  const data: SefariaTextResponse = await response.json();
+
+  const hebrewVersion = data.versions.find(v => v.language === 'he');
+  const textArray = hebrewVersion
+    ? (Array.isArray(hebrewVersion.text) ? hebrewVersion.text : [hebrewVersion.text])
+    : [];
+
+  const result: MishnahText = {
+    hebrew: textArray,
+    heRef: data.heRef || sefariaRef,
+  };
+
+  textCache.set(sefariaRef, result);
+  return result;
+}
 
 /** Fetch commentary for a mishnah */
 export async function fetchCommentary(

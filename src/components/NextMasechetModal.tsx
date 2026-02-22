@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
-import { ArrowLeft, BookOpen } from 'lucide-react';
-import { getMasechet, getMasechetUnits } from '../data/mishnah-structure';
+import { ArrowLeft, Shuffle, BookOpen } from 'lucide-react';
+import { getMasechet, getMasechetUnits, getTotalMishnayot } from '../data/mishnah-structure';
+import { gematriya } from '../services/scheduler';
 import type { LearningPlan } from '../store/usePlanStore';
 
 interface NextMasechetModalProps {

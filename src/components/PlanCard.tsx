@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Calendar, Trophy, ChevronLeft } from 'lucide-react';
-import { type LearningPlan, getSkippedUnitsCount, getPreLearnedUnitsCount } from '../store/usePlanStore';
+import type { LearningPlan } from '../store/usePlanStore';
 import { getAmountForPosition } from '../services/scheduler';
 
 interface PlanCardProps {
@@ -9,10 +9,7 @@ interface PlanCardProps {
 
 export default function PlanCard({ plan }: PlanCardProps) {
   const navigate = useNavigate();
-  const holesCount = getSkippedUnitsCount(plan);
-  const preLearnedCount = getPreLearnedUnitsCount(plan);
-  const effectiveLearned = plan.currentPosition - holesCount + preLearnedCount;
-  const progress = Math.round((effectiveLearned / plan.totalUnits) * 100);
+  const progress = Math.round((plan.currentPosition / plan.totalUnits) * 100);
   const todayAmount = getAmountForPosition(plan.currentPosition, plan.calculatedAmountPerDay, plan.distribution);
 
   return (
