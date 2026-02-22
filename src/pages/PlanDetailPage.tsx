@@ -182,14 +182,17 @@ export default function PlanDetailPage() {
             {todayItems.map((item, idx) => (
               <div key={idx} className="bg-parchment-50 rounded-xl p-3 flex items-center justify-between">
                 <span className="text-sm text-gray-500">
-                  {item.toMishnah - item.fromMishnah + 1} {unitLabel}
+                  {plan.unit === 'perek'
+                    ? `${item.toMishnah} משניות`
+                    : `${item.toMishnah - item.fromMishnah + 1} משניות`}
                 </span>
                 <span className="font-bold text-primary-800">
                   {plan.masechetIds.length > 1 && <span className="text-xs text-gray-500 ml-2">{item.masechetName}</span>}
-                  פרק {gematriya(item.chapter)}{' '}
-                  {item.fromMishnah === item.toMishnah
-                    ? `משנה ${gematriya(item.fromMishnah)}`
-                    : `משניות ${gematriya(item.fromMishnah)}-${gematriya(item.toMishnah)}`}
+                  {plan.unit === 'perek'
+                    ? `פרק ${gematriya(item.chapter)}`
+                    : item.fromMishnah === item.toMishnah
+                      ? `פרק ${gematriya(item.chapter)} משנה ${gematriya(item.fromMishnah)}`
+                      : `פרק ${gematriya(item.chapter)} משניות ${gematriya(item.fromMishnah)}-${gematriya(item.toMishnah)}`}
                 </span>
               </div>
             ))}
