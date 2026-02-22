@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-50: #f0f5fa;
+  --color-primary-100: #dce8f3;
+  --color-primary-200: #b8d0e7;
+  --color-primary-300: #8ab3d6;
+  --color-primary-400: #5a92c1;
+  --color-primary-500: #3a72a4;
+  --color-primary-600: #2d5a83;
+  --color-primary-700: #1e3a5f;
+  --color-primary-800: #162c47;
+  --color-primary-900: #0f1e30;
+
+  --color-parchment-50: #fdfcfa;
+  --color-parchment-100: #f8f5f0;
+  --color-parchment-200: #f0e6d3;
+  --color-parchment-300: #e5d4b5;
+  --color-parchment-400: #d4bc8e;
+  --color-parchment-500: #c4a46a;
+
+  --color-gold-400: #d4a843;
+  --color-gold-500: #b8922e;
+  --color-gold-600: #9a7a24;
+
+  --color-success: #2d8a4e;
+  --color-warning: #d4a843;
+  --color-danger: #c0392b;
+}
+
+@layer base {
+  body {
+    font-family: 'Heebo', 'Segoe UI', 'David', sans-serif;
+    background-color: var(--color-parchment-100);
+    color: var(--color-primary-900);
+    min-height: 100dvh;
+  }
+
+  .font-serif-hebrew {
+    font-family: 'Frank Ruhl Libre', 'David', serif;
+    line-height: 2;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-700 text-white px-6 py-3 rounded-xl font-bold
+           hover:bg-primary-600 active:bg-primary-800 transition-colors
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-parchment-200 text-primary-700 px-6 py-3 rounded-xl font-bold
+           border-2 border-primary-300 hover:bg-parchment-300
+           active:bg-parchment-400 transition-colors;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-md border border-parchment-200 p-5;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-parchment-300
+           bg-white focus:border-primary-400 focus:outline-none
+           transition-colors text-lg;
+  }
+
+  .select-field {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-parchment-300
+           bg-white focus:border-primary-400 focus:outline-none
+           transition-colors text-lg appearance-none cursor-pointer;
+  }
+}
