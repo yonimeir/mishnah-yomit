@@ -1,17 +1,22 @@
 import { useState, useMemo } from 'react';
-import { ArrowRight, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, ChevronUp, BookOpen, ScrollText, Scale } from 'lucide-react';
 import {
-  MISHNAH_STRUCTURE,
   type Masechet,
+  type ContentType,
+  getStructureForType,
+  getContentTypeLabels,
+  getGemaraDafRef,
+  dafToDisplay,
 } from '../data/mishnah-structure';
 import { gematriya } from '../services/scheduler';
 import { usePlanStore, isChapterPreLearned, type LearningPlan } from '../store/usePlanStore';
 import MishnahTextDisplay from '../components/MishnahText';
 
-type View = 'sedarim' | 'masechtot' | 'perakim' | 'learning';
+type View = 'types' | 'sedarim' | 'masechtot' | 'perakim' | 'learning';
 
 export default function FreeLearningPage() {
-  const [view, setView] = useState<View>('sedarim');
+  const [view, setView] = useState<View>('types');
+  const [contentType, setContentType] = useState<ContentType>('mishnah');
   const [selectedSederId, setSelectedSederId] = useState<string | null>(null);
   const [selectedMasechet, setSelectedMasechet] = useState<Masechet | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number>(0);
@@ -21,7 +26,9 @@ export default function FreeLearningPage() {
   const { plans, addPreLearnedChapters } = usePlanStore();
   const activePlans = plans.filter(p => !p.isCompleted);
 
-  const selectedSeder = MISHNAH_STRUCTURE.find(s => s.id === selectedSederId);
+  const structure = useMemo(() => getStructureForType(contentType), [contentType]);
+  const labels = useMemo(() => getContentTypeLabels(contentType), [contentType]);
+  const selectedSeder = structure.find(s => s.id === selectedSederId);
 
   const relevantPlans = useMemo(() => {
     if (!selectedMasechet) return [];
@@ -63,30 +70,88 @@ export default function FreeLearningPage() {
     setSelectedPlanIds(new Set());
   };
 
+  const getChapterLabel = (masechet: Masechet, chapterIndex: number): string => {
+    if (contentType === 'gemara') {
+      return dafToDisplay(masechet, chapterIndex);
+    }
+    return gematriya(chapterIndex + 1);
+  };
+
+  const getChapterSubLabel = (masechet: Masechet, chapterIndex: number): string => {
+    if (contentType === 'gemara') {
+      const amudim = masechet.chapters[chapterIndex];
+      return amudim === 1 ? 'עמוד אחד' : `${amudim} ${labels.unitPlural}`;
+    }
+    return `${masechet.chapters[chapterIndex]} ${labels.unitPlural}`;
+  };
+
+  const getSefariaRef = (masechet: Masechet, chapter: number): string => {
+    if (contentType === 'gemara') {
+      return getGemaraDafRef(masechet, chapter - 1);
+    }
+    return `${masechet.sefariaName} ${chapter}`;
+  };
+
   const goBack = () => {
     if (view === 'learning') setView('perakim');
     else if (view === 'perakim') setView('masechtot');
     else if (view === 'masechtot') setView('sedarim');
+    else if (view === 'sedarim') setView('types');
   };
 
   return (
     <div className="space-y-4">
-      {view !== 'sedarim' && (
+      {view !== 'types' && (
         <button onClick={goBack} className="flex items-center gap-1 text-primary-600 hover:text-primary-800 transition-colors">
           <ArrowRight className="w-4 h-4" />
           חזרה
         </button>
       )}
 
-      {/* Sedarim list */}
-      {view === 'sedarim' && (
+      {/* Content type selection */}
+      {view === 'types' && (
         <div className="space-y-4">
           <div className="text-center mb-2">
             <h2 className="text-xl font-bold text-primary-800">לימוד חופשי</h2>
             <p className="text-sm text-gray-500">בחר מה ללמוד - יסומן אוטומטית בתוכניות שלך</p>
           </div>
 
-          {MISHNAH_STRUCTURE.map(seder => (
+          <button
+            onClick={() => { setContentType('mishnah'); setView('sedarim'); }}
+            className="card w-full text-right hover:shadow-md transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <BookOpen className="w-7 h-7 text-primary-600" />
+              <h3 className="text-lg font-bold text-primary-800">משנה</h3>
+            </div>
+          </button>
+          <button
+            onClick={() => { setContentType('gemara'); setView('sedarim'); }}
+            className="card w-full text-right hover:shadow-md transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <ScrollText className="w-7 h-7 text-amber-700" />
+              <h3 className="text-lg font-bold text-primary-800">גמרא</h3>
+            </div>
+          </button>
+          <button
+            onClick={() => { setContentType('rambam'); setView('sedarim'); }}
+            className="card w-full text-right hover:shadow-md transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <Scale className="w-7 h-7 text-emerald-700" />
+              <h3 className="text-lg font-bold text-primary-800">רמב"ם</h3>
+            </div>
+          </button>
+        </div>
+      )}
+
+      {/* Sedarim list */}
+      {view === 'sedarim' && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-primary-800 text-center">{labels.name} - בחר {labels.orderSingular}</h2>
+
+          {structure.map(seder => (
             <button
               key={seder.id}
               onClick={() => { setSelectedSederId(seder.id); setView('masechtot'); }}
@@ -94,9 +159,9 @@ export default function FreeLearningPage() {
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-400">
-                  {seder.masechtot.length} מסכתות
+                  {seder.masechtot.length} {labels.bookPlural}
                 </span>
-                <h3 className="text-lg font-bold text-primary-800">סדר {seder.name}</h3>
+                <h3 className="text-lg font-bold text-primary-800">{labels.orderSingular} {seder.name}</h3>
               </div>
             </button>
           ))}
@@ -106,7 +171,7 @@ export default function FreeLearningPage() {
       {/* Masechtot in selected seder */}
       {view === 'masechtot' && selectedSeder && (
         <div className="space-y-3">
-          <h2 className="text-xl font-bold text-primary-800 text-center">סדר {selectedSeder.name}</h2>
+          <h2 className="text-xl font-bold text-primary-800 text-center">{labels.orderSingular} {selectedSeder.name}</h2>
 
           <div className="grid grid-cols-2 gap-2">
             {selectedSeder.masechtot.map(m => (
@@ -117,7 +182,7 @@ export default function FreeLearningPage() {
               >
                 <span className="font-bold text-primary-800 block">{m.name}</span>
                 <span className="text-xs text-gray-500">
-                  {m.chapters.length} פרקים
+                  {m.chapters.length} {labels.chapterPlural}
                 </span>
               </button>
             ))}
@@ -128,10 +193,12 @@ export default function FreeLearningPage() {
       {/* Chapters in selected masechet */}
       {view === 'perakim' && selectedMasechet && (
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-primary-800 text-center">מסכת {selectedMasechet.name}</h2>
+          <h2 className="text-xl font-bold text-primary-800 text-center">
+            {contentType === 'rambam' ? 'הלכות' : labels.bookSingular} {selectedMasechet.name}
+          </h2>
 
-          <div className="grid grid-cols-4 gap-2">
-            {selectedMasechet.chapters.map((mishnaCount, idx) => {
+          <div className={`grid ${contentType === 'gemara' ? 'grid-cols-5' : 'grid-cols-4'} gap-2`}>
+            {selectedMasechet.chapters.map((_, idx) => {
               const ch = idx + 1;
               const learned = isChapterLearnedInAnyPlan(selectedMasechet.id, ch);
 
@@ -145,9 +212,9 @@ export default function FreeLearningPage() {
                       : 'bg-parchment-50 hover:bg-parchment-200 text-primary-800'
                   }`}
                 >
-                  <span className="block font-bold text-lg">{gematriya(ch)}</span>
+                  <span className="block font-bold text-lg">{getChapterLabel(selectedMasechet, idx)}</span>
                   <span className={`text-xs ${learned ? 'text-white/80' : 'text-gray-400'}`}>
-                    {mishnaCount} משניות
+                    {getChapterSubLabel(selectedMasechet, idx)}
                   </span>
                   {learned && <Check className="w-3.5 h-3.5 mx-auto mt-1" />}
                 </button>
@@ -179,20 +246,21 @@ export default function FreeLearningPage() {
                         : 'bg-parchment-200 text-gray-600 hover:bg-parchment-300'
                   }`}
                 >
-                  {gematriya(ch)}
+                  {getChapterLabel(selectedMasechet, idx)}
                 </button>
               );
             })}
           </div>
 
-          {/* Mishnah text */}
+          {/* Text display */}
           <MishnahTextDisplay
-            sefariaRef={`${selectedMasechet.sefariaName} ${selectedChapter}`}
+            sefariaRef={getSefariaRef(selectedMasechet, selectedChapter)}
             sefariaName={selectedMasechet.sefariaName}
             chapter={selectedChapter}
             fromMishnah={1}
             toMishnah={selectedMasechet.chapters[selectedChapter - 1]}
             masechetName={selectedMasechet.name}
+            contentType={contentType}
           />
 
           {/* Mark as learned */}
@@ -201,9 +269,8 @@ export default function FreeLearningPage() {
               <>
                 <div className="flex items-center justify-center gap-2 text-success font-bold py-2">
                   <Check className="w-5 h-5" />
-                  פרק זה סומן כנלמד
+                  {contentType === 'gemara' ? 'דף זה' : 'פרק זה'} סומן כנלמד
                 </div>
-                {/* Show which plans still don't have it marked */}
                 {relevantPlans.some(p => !isChapterLearnedInPlan(p, selectedMasechet.id, selectedChapter)) && (
                   <button
                     onClick={() => {
@@ -220,7 +287,7 @@ export default function FreeLearningPage() {
               </>
             ) : relevantPlans.length === 0 ? (
               <p className="text-xs text-gray-400 text-center py-2">
-                אין תוכנית פעילה עם מסכת {selectedMasechet.name}
+                אין תוכנית פעילה עם {contentType === 'rambam' ? 'הלכות' : labels.bookSingular} {selectedMasechet.name}
               </p>
             ) : relevantPlans.length === 1 ? (
               <button

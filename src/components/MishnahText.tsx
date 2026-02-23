@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { fetchChapter, fetchCommentary, COMMENTATORS, type MishnahText as MishnahTextType } from '../services/sefaria';
+import { fetchChapter, fetchCommentary, type MishnahText as MishnahTextType, getCommentatorsForType } from '../services/sefaria';
 import { gematriya } from '../services/scheduler';
 import { Loader2, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
+import type { ContentType } from '../data/mishnah-structure';
 
 interface MishnahTextProps {
-  sefariaRef: string;      // e.g. "Mishnah Berakhot 1"
-  sefariaName: string;     // e.g. "Mishnah Berakhot"
+  sefariaRef: string;
+  sefariaName: string;
   chapter: number;
   fromMishnah: number;
   toMishnah: number;
   masechetName: string;
+  contentType?: ContentType;
 }
 
 interface MishnahCommentaries {
@@ -25,7 +27,9 @@ export default function MishnahTextDisplay({
   fromMishnah,
   toMishnah,
   masechetName,
+  contentType = 'mishnah',
 }: MishnahTextProps) {
+  const commentators = getCommentatorsForType(contentType);
   const [text, setText] = useState<MishnahTextType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -139,11 +143,12 @@ export default function MishnahTextDisplay({
       {/* Chapter title */}
       <div className="text-center mb-4">
         <h2 className="text-xl font-bold text-primary-800 font-serif-hebrew">
-          מסכת {masechetName} פרק {gematriya(chapter)}
+          {contentType === 'rambam' ? 'הלכות' : contentType === 'gemara' ? 'מסכת' : 'מסכת'} {masechetName}{' '}
+          {contentType === 'gemara' ? `דף ${chapter + 1}` : `פרק ${gematriya(chapter)}`}
         </h2>
-        {fromMishnah !== toMishnah && (
+        {contentType !== 'gemara' && fromMishnah !== toMishnah && (
           <p className="text-sm text-gray-500 mt-1">
-            משניות {gematriya(fromMishnah)} - {gematriya(toMishnah)}
+            {contentType === 'rambam' ? 'הלכות' : 'משניות'} {gematriya(fromMishnah)} - {gematriya(toMishnah)}
           </p>
         )}
       </div>
@@ -167,10 +172,10 @@ export default function MishnahTextDisplay({
               />
             </div>
 
-            {/* Commentary selector row - per mishnah */}
+            {/* Commentary selector row */}
             <div className="flex items-center gap-2 border-t border-parchment-200 pt-2">
               <MessageCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-              {COMMENTATORS.map((c) => {
+              {commentators.map((c) => {
                 const isActive = activeCommentator === c.id;
                 return (
                   <button
@@ -202,7 +207,7 @@ export default function MishnahTextDisplay({
                 ) : commentaries[activeCommentator]?.[mishnahIdx]?.length ? (
                   <div className="space-y-2">
                     <p className="text-xs font-bold text-primary-600 mb-1">
-                      {COMMENTATORS.find(c => c.id === activeCommentator)?.name}
+                      {commentators.find(c => c.id === activeCommentator)?.name}
                     </p>
                     {commentaries[activeCommentator][mishnahIdx].map((text, cidx) => (
                       <div

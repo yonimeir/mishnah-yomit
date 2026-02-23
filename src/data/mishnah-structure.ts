@@ -1,17 +1,98 @@
-// Complete structure of the Six Orders of the Mishnah
-// Each tractate includes: Hebrew name, Sefaria API name, and mishnayot count per chapter
+import { GEMARA_STRUCTURE } from './gemara-structure';
+import { RAMBAM_STRUCTURE } from './rambam-structure';
 
 export interface Masechet {
   id: string;
-  name: string;           // Hebrew name
-  sefariaName: string;    // For Sefaria API calls
-  chapters: number[];     // Number of mishnayot in each chapter
+  name: string;
+  sefariaName: string;
+  chapters: number[];
+  startDaf?: number;
 }
 
 export interface Seder {
   id: string;
   name: string;
   masechtot: Masechet[];
+}
+
+export type ContentType = 'mishnah' | 'gemara' | 'rambam';
+
+function getAllStructures(): Seder[][] {
+  return [MISHNAH_STRUCTURE, GEMARA_STRUCTURE, RAMBAM_STRUCTURE];
+}
+
+export function getContentType(masechetId: string): ContentType {
+  if (masechetId.startsWith('g_')) return 'gemara';
+  if (masechetId.startsWith('r_')) return 'rambam';
+  return 'mishnah';
+}
+
+export function getStructureForType(type: ContentType): Seder[] {
+  switch (type) {
+    case 'mishnah': return MISHNAH_STRUCTURE;
+    case 'gemara': return GEMARA_STRUCTURE;
+    case 'rambam': return RAMBAM_STRUCTURE;
+  }
+}
+
+export function getContentTypeLabels(type: ContentType) {
+  switch (type) {
+    case 'mishnah': return {
+      name: 'משנה',
+      unitSingular: 'משנה', unitPlural: 'משניות',
+      chapterSingular: 'פרק', chapterPlural: 'פרקים',
+      bookSingular: 'מסכת', bookPlural: 'מסכתות',
+      orderSingular: 'סדר', orderPlural: 'סדרים',
+      allName: 'ש"ס משנה',
+    };
+    case 'gemara': return {
+      name: 'גמרא',
+      unitSingular: 'עמוד', unitPlural: 'עמודים',
+      chapterSingular: 'דף', chapterPlural: 'דפים',
+      bookSingular: 'מסכת', bookPlural: 'מסכתות',
+      orderSingular: 'סדר', orderPlural: 'סדרים',
+      allName: 'ש"ס',
+    };
+    case 'rambam': return {
+      name: 'רמב"ם',
+      unitSingular: 'הלכה', unitPlural: 'הלכות',
+      chapterSingular: 'פרק', chapterPlural: 'פרקים',
+      bookSingular: 'הלכות', bookPlural: 'חלקים',
+      orderSingular: 'ספר', orderPlural: 'ספרים',
+      allName: 'משנה תורה',
+    };
+  }
+}
+
+/** Get the display label for a unit type based on content type */
+export function getUnitLabel(type: ContentType, unit: LearningUnit, plural = true): string {
+  const labels = getContentTypeLabels(type);
+  if (unit === 'mishnah') return plural ? labels.unitPlural : labels.unitSingular;
+  return plural ? labels.chapterPlural : labels.chapterSingular;
+}
+
+/** Generate Sefaria reference for Gemara daf */
+export function getGemaraDafRef(masechet: Masechet, chapterIndex: number): string {
+  const startDaf = masechet.startDaf ?? 2;
+  const dafNumber = startDaf + chapterIndex;
+  return `${masechet.sefariaName} ${dafNumber}`;
+}
+
+/** Generate Sefaria reference for Gemara amud */
+export function getGemaraAmudRef(masechet: Masechet, chapterIndex: number, amudIndex: number): string {
+  const startDaf = masechet.startDaf ?? 2;
+  const dafNumber = startDaf + chapterIndex;
+  if (masechet.chapters[chapterIndex] === 1) {
+    return `${masechet.sefariaName} ${dafNumber}b`;
+  }
+  const amud = amudIndex === 0 ? 'a' : 'b';
+  return `${masechet.sefariaName} ${dafNumber}${amud}`;
+}
+
+/** Convert daf number to Hebrew display (e.g., "ב" for daf 2) */
+export function dafToDisplay(masechet: Masechet, chapterIndex: number): string {
+  const startDaf = masechet.startDaf ?? 2;
+  return String(startDaf + chapterIndex);
 }
 
 export const MISHNAH_STRUCTURE: Seder[] = [
@@ -119,15 +200,21 @@ export const MISHNAH_STRUCTURE: Seder[] = [
 // Helper functions
 
 export function getMasechet(masechetId: string): Masechet | undefined {
-  for (const seder of MISHNAH_STRUCTURE) {
-    const m = seder.masechtot.find(m => m.id === masechetId);
-    if (m) return m;
+  for (const structure of getAllStructures()) {
+    for (const seder of structure) {
+      const m = seder.masechtot.find(m => m.id === masechetId);
+      if (m) return m;
+    }
   }
   return undefined;
 }
 
 export function getSederForMasechet(masechetId: string): Seder | undefined {
-  return MISHNAH_STRUCTURE.find(s => s.masechtot.some(m => m.id === masechetId));
+  for (const structure of getAllStructures()) {
+    const seder = structure.find(s => s.masechtot.some(m => m.id === masechetId));
+    if (seder) return seder;
+  }
+  return undefined;
 }
 
 export function getTotalMishnayot(masechet: Masechet): number {
@@ -138,8 +225,9 @@ export function getTotalChapters(masechet: Masechet): number {
   return masechet.chapters.length;
 }
 
-export function getAllMasechtot(): Masechet[] {
-  return MISHNAH_STRUCTURE.flatMap(s => s.masechtot);
+export function getAllMasechtot(type?: ContentType): Masechet[] {
+  if (type) return getStructureForType(type).flatMap(s => s.masechtot);
+  return getAllStructures().flatMap(structures => structures.flatMap(s => s.masechtot));
 }
 
 /** Convert a flat mishnah index (0-based) to chapter:mishnah (1-based) */
@@ -238,27 +326,29 @@ export function localToGlobal(
 export function getPlanDisplayName(masechetIds: string[]): string {
   if (masechetIds.length === 0) return '';
 
-  // Check if it's all of shas
-  const allIds = getAllMasechtot().map(m => m.id);
+  const contentType = getContentType(masechetIds[0]);
+  const labels = getContentTypeLabels(contentType);
+  const structure = getStructureForType(contentType);
+
+  const allIds = structure.flatMap(s => s.masechtot.map(m => m.id));
   if (masechetIds.length === allIds.length && masechetIds.every(id => allIds.includes(id))) {
-    return 'ש"ס משנה';
+    return labels.allName;
   }
 
-  // Check if it's a full seder
-  for (const seder of MISHNAH_STRUCTURE) {
+  for (const seder of structure) {
     const sederIds = seder.masechtot.map(m => m.id);
     if (masechetIds.length === sederIds.length && sederIds.every(id => masechetIds.includes(id))) {
-      return `סדר ${seder.name}`;
+      return `${labels.orderSingular} ${seder.name}`;
     }
   }
 
-  // Single masechet
   if (masechetIds.length === 1) {
     const m = getMasechet(masechetIds[0]);
-    return m ? `מסכת ${m.name}` : '';
+    if (!m) return '';
+    if (contentType === 'rambam') return `הלכות ${m.name}`;
+    return `${labels.bookSingular} ${m.name}`;
   }
 
-  // Multiple specific masechtot
   const names = masechetIds.slice(0, 3).map(id => getMasechet(id)?.name).filter(Boolean);
   const suffix = masechetIds.length > 3 ? ` (+${masechetIds.length - 3})` : '';
   return names.join(', ') + suffix;
@@ -266,11 +356,14 @@ export function getPlanDisplayName(masechetIds: string[]): string {
 
 /** Get all masechet IDs for a seder */
 export function getSederMasechetIds(sederId: string): string[] {
-  const seder = MISHNAH_STRUCTURE.find(s => s.id === sederId);
-  return seder ? seder.masechtot.map(m => m.id) : [];
+  for (const structure of getAllStructures()) {
+    const seder = structure.find(s => s.id === sederId);
+    if (seder) return seder.masechtot.map(m => m.id);
+  }
+  return [];
 }
 
-/** Get all masechet IDs in shas */
-export function getAllMasechetIds(): string[] {
-  return getAllMasechtot().map(m => m.id);
+/** Get all masechet IDs for a content type (defaults to mishnah) */
+export function getAllMasechetIds(type: ContentType = 'mishnah'): string[] {
+  return getAllMasechtot(type).map(m => m.id);
 }

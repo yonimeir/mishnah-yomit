@@ -91,11 +91,32 @@ export async function fetchCommentary(
   return result;
 }
 
-export const COMMENTATORS = [
+import type { ContentType } from '../data/mishnah-structure';
+
+export const MISHNAH_COMMENTATORS = [
   { id: 'bartenura', name: 'ברטנורא', sefariaName: 'Bartenura' },
   { id: 'tosafot_yom_tov', name: 'תוספות יום טוב', sefariaName: 'Tosafot Yom Tov' },
   { id: 'rambam', name: 'רמב"ם', sefariaName: 'Rambam' },
 ] as const;
+
+export const GEMARA_COMMENTATORS = [
+  { id: 'rashi', name: 'רש"י', sefariaName: 'Rashi' },
+  { id: 'tosafot', name: 'תוספות', sefariaName: 'Tosafot' },
+] as const;
+
+export const RAMBAM_COMMENTATORS = [
+  { id: 'kessef_mishneh', name: 'כסף משנה', sefariaName: 'Kessef Mishneh' },
+] as const;
+
+export const COMMENTATORS = MISHNAH_COMMENTATORS;
+
+export function getCommentatorsForType(type: ContentType) {
+  switch (type) {
+    case 'mishnah': return MISHNAH_COMMENTATORS;
+    case 'gemara': return GEMARA_COMMENTATORS;
+    case 'rambam': return RAMBAM_COMMENTATORS;
+  }
+}
 
 /** Pre-fetch next lessons for offline use */
 export async function prefetchLessons(refs: string[]): Promise<void> {

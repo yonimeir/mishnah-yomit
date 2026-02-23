@@ -20,7 +20,7 @@ export default function HomePage() {
           ברוכים הבאים!
         </h2>
         <p className="text-gray-600 mb-8 max-w-xs mx-auto">
-          התחל ללמוד משנה יומית. צור תוכנית לימוד מותאמת אישית.
+          התחל ללמוד יומי - משנה, גמרא או רמב"ם. צור תוכנית לימוד מותאמת אישית.
         </p>
         <button
           onClick={() => navigate('/new-plan')}

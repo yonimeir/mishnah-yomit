@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BookOpen, Trash2, RotateCcw, Play, CheckCheck, AlertTriangle, Settings } from 'lucide-react';
 import { usePlanStore, getSkippedUnitsCount, getPreLearnedUnitsCount } from '../store/usePlanStore';
-import { globalToLocal, indexToRef } from '../data/mishnah-structure';
+import { globalToLocal, indexToRef, getUnitLabel, getContentTypeLabels } from '../data/mishnah-structure';
 import { gematriya, getLearningItemsForDay, getAmountForPosition } from '../services/scheduler';
 import ProgressTable from '../components/ProgressTable';
 import AlreadyLearnedModal from '../components/AlreadyLearnedModal';
@@ -45,7 +45,9 @@ export default function PlanDetailPage() {
     ? []
     : getLearningItemsForDay(plan.masechetIds, plan.unit, plan.currentPosition, todayAmount, plan.preLearnedChapters);
 
-  const unitLabel = plan.unit === 'mishnah' ? 'משניות' : 'פרקים';
+  const ct = plan.contentType || 'mishnah';
+  const unitLabel = getUnitLabel(ct, plan.unit);
+  const ctLabels = getContentTypeLabels(ct);
 
   return (
     <div className="space-y-6">
@@ -60,7 +62,7 @@ export default function PlanDetailPage() {
             <p className="text-sm text-gray-500">
               {plan.mode === 'by_book' ? 'לפי ספר' : 'לפי קצב'} •{' '}
               {unitLabel}
-              {plan.masechetIds.length > 1 && ` • ${plan.masechetIds.length} מסכתות`}
+              {plan.masechetIds.length > 1 && ` • ${plan.masechetIds.length} ${ctLabels.bookPlural}`}
             </p>
           </div>
           {!plan.isCompleted && (

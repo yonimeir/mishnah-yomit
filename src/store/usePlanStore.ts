@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ScheduleFrequency, DistributionInfo } from '../services/scheduler';
-import type { LearningUnit } from '../data/mishnah-structure';
+import type { LearningUnit, ContentType } from '../data/mishnah-structure';
 
 export interface SkippedChapter {
   masechetId: string;
@@ -13,6 +13,7 @@ export interface LearningPlan {
   createdAt: string;
 
   // What to learn
+  contentType: ContentType;
   masechetIds: string[];
   planName: string;
   mode: 'by_book' | 'by_pace';
@@ -290,6 +291,7 @@ export const usePlanStore = create<PlanStore>()(
           ...persisted,
           plans: (persisted?.plans || []).map(p => ({
             ...p,
+            contentType: p.contentType || 'mishnah',
             skippedChapters: p.skippedChapters || [],
             preLearnedChapters: p.preLearnedChapters || [],
           })),

@@ -9,7 +9,7 @@ export default function Layout() {
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <BookOpen className="w-7 h-7 text-gold-400" />
-            <h1 className="text-xl font-bold">משנה יומית</h1>
+            <h1 className="text-xl font-bold">לימוד יומי</h1>
           </div>
         </div>
       </header>

@@ -1,14 +1,17 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Clock, ArrowRight, Check, Library, BookMarked } from 'lucide-react';
+import { BookOpen, Clock, ArrowRight, Check, Library, BookMarked, ScrollText, Scale } from 'lucide-react';
 import {
-  MISHNAH_STRUCTURE,
   getTotalMishnayot,
   getMultiMasechetTotalUnits,
   getPlanDisplayName,
   getSederMasechetIds,
   getAllMasechetIds,
+  getStructureForType,
+  getContentTypeLabels,
+  getUnitLabel,
   type LearningUnit,
+  type ContentType,
 } from '../data/mishnah-structure';
 import {
   calculateByBookScheduleMulti,
@@ -19,7 +22,7 @@ import type { FrequencyType, ScheduleFrequency } from '../services/scheduler';
 import { usePlanStore, generateId, type LearningPlan } from '../store/usePlanStore';
 import HebrewDatePicker from '../components/HebrewDatePicker';
 
-type Step = 'mode' | 'scope' | 'masechet' | 'settings';
+type Step = 'content_type' | 'mode' | 'scope' | 'masechet' | 'settings';
 type SelectionScope = 'single' | 'multiple' | 'seder' | 'shas';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
@@ -28,7 +31,8 @@ export default function NewPlanPage() {
   const navigate = useNavigate();
   const { addPlan } = usePlanStore();
 
-  const [step, setStep] = useState<Step>('mode');
+  const [step, setStep] = useState<Step>('content_type');
+  const [contentType, setContentType] = useState<ContentType>('mishnah');
   const [mode, setMode] = useState<'by_book' | 'by_pace' | null>(null);
   const [scope, setScope] = useState<SelectionScope>('single');
   const [selectedMasechetIds, setSelectedMasechetIds] = useState<string[]>([]);
@@ -48,12 +52,14 @@ export default function NewPlanPage() {
     reviewEvery: reviewEvery > 0 ? reviewEvery : undefined,
   };
 
-  // Compute the final list of masechet IDs based on scope
+  const structure = useMemo(() => getStructureForType(contentType), [contentType]);
+  const labels = useMemo(() => getContentTypeLabels(contentType), [contentType]);
+
   const masechetIds = useMemo(() => {
-    if (scope === 'shas') return getAllMasechetIds();
+    if (scope === 'shas') return getAllMasechetIds(contentType);
     if (scope === 'seder' && selectedSederId) return getSederMasechetIds(selectedSederId);
     return selectedMasechetIds;
-  }, [scope, selectedMasechetIds, selectedSederId]);
+  }, [scope, selectedMasechetIds, selectedSederId, contentType]);
 
   const totalUnits = useMemo(
     () => masechetIds.length > 0 ? getMultiMasechetTotalUnits(masechetIds, unit) : 0,
@@ -103,6 +109,7 @@ export default function NewPlanPage() {
     const plan: LearningPlan = {
       id: generateId(),
       createdAt: new Date().toISOString(),
+      contentType,
       masechetIds,
       planName,
       mode,
@@ -126,7 +133,8 @@ export default function NewPlanPage() {
   };
 
   const goBack = () => {
-    if (step === 'scope') setStep('mode');
+    if (step === 'mode') setStep('content_type');
+    else if (step === 'scope') setStep('mode');
     else if (step === 'masechet') setStep('scope');
     else if (step === 'settings') {
       if (scope === 'shas') setStep('scope');
@@ -136,11 +144,63 @@ export default function NewPlanPage() {
 
   return (
     <div className="space-y-6">
-      {step !== 'mode' && (
+      {step !== 'content_type' && (
         <button onClick={goBack} className="flex items-center gap-1 text-primary-600 hover:text-primary-800 transition-colors">
           <ArrowRight className="w-4 h-4" />
           חזרה
         </button>
+      )}
+
+      {/* ── Step 0: Content Type ── */}
+      {step === 'content_type' && (
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-primary-800 text-center mb-6">מה תרצה ללמוד?</h2>
+
+          <button
+            onClick={() => { setContentType('mishnah'); setUnit('mishnah'); setStep('mode'); }}
+            className="card w-full text-right hover:shadow-lg transition-shadow group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-primary-100 rounded-xl p-3 group-hover:bg-primary-200 transition-colors">
+                <BookOpen className="w-8 h-8 text-primary-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-primary-800">משנה</h3>
+                <p className="text-sm text-gray-600">ששה סדרי משנה - 63 מסכתות</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => { setContentType('gemara'); setUnit('perek'); setStep('mode'); }}
+            className="card w-full text-right hover:shadow-lg transition-shadow group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-amber-100 rounded-xl p-3 group-hover:bg-amber-200 transition-colors">
+                <ScrollText className="w-8 h-8 text-amber-700" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-primary-800">גמרא</h3>
+                <p className="text-sm text-gray-600">תלמוד בבלי - 37 מסכתות</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => { setContentType('rambam'); setUnit('perek'); setStep('mode'); }}
+            className="card w-full text-right hover:shadow-lg transition-shadow group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-emerald-100 rounded-xl p-3 group-hover:bg-emerald-200 transition-colors">
+                <Scale className="w-8 h-8 text-emerald-700" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-primary-800">רמב"ם</h3>
+                <p className="text-sm text-gray-600">משנה תורה - 83 חלקים, 1,000 פרקים</p>
+              </div>
+            </div>
+          </button>
+        </div>
       )}
 
       {/* ── Step 1: Mode ── */}
@@ -185,25 +245,27 @@ export default function NewPlanPage() {
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-primary-800 text-center mb-4">מה תרצה ללמוד?</h2>
 
-          {/* Unit selector */}
-          <div className="flex gap-2 justify-center mb-4">
-            <button
-              onClick={() => setUnit('mishnah')}
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                unit === 'mishnah' ? 'bg-primary-700 text-white' : 'bg-parchment-200 text-primary-700'
-              }`}
-            >
-              לפי משניות
-            </button>
-            <button
-              onClick={() => setUnit('perek')}
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                unit === 'perek' ? 'bg-primary-700 text-white' : 'bg-parchment-200 text-primary-700'
-              }`}
-            >
-              לפי פרקים
-            </button>
-          </div>
+          {/* Unit selector (not shown for rambam since only perek mode is relevant) */}
+          {contentType !== 'rambam' && (
+            <div className="flex gap-2 justify-center mb-4">
+              <button
+                onClick={() => setUnit('mishnah')}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                  unit === 'mishnah' ? 'bg-primary-700 text-white' : 'bg-parchment-200 text-primary-700'
+                }`}
+              >
+                לפי {labels.unitPlural}
+              </button>
+              <button
+                onClick={() => setUnit('perek')}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                  unit === 'perek' ? 'bg-primary-700 text-white' : 'bg-parchment-200 text-primary-700'
+                }`}
+              >
+                לפי {labels.chapterPlural}
+              </button>
+            </div>
+          )}
 
           <button
             onClick={() => { setScope('single'); setSelectedMasechetIds([]); setStep('masechet'); }}
@@ -214,8 +276,8 @@ export default function NewPlanPage() {
                 <BookMarked className="w-7 h-7 text-primary-600" />
               </div>
               <div>
-                <h3 className="font-bold text-primary-800">מסכת אחת</h3>
-                <p className="text-sm text-gray-500">בחר מסכת ספציפית</p>
+                <h3 className="font-bold text-primary-800">{labels.bookSingular} {contentType === 'rambam' ? 'אחד' : 'אחת'}</h3>
+                <p className="text-sm text-gray-500">בחר {labels.bookSingular} {contentType === 'rambam' ? 'ספציפי' : 'ספציפית'}</p>
               </div>
             </div>
           </button>
@@ -229,8 +291,8 @@ export default function NewPlanPage() {
                 <BookOpen className="w-7 h-7 text-primary-600" />
               </div>
               <div>
-                <h3 className="font-bold text-primary-800">כמה מסכתות</h3>
-                <p className="text-sm text-gray-500">בחר מסכתות מרובות</p>
+                <h3 className="font-bold text-primary-800">כמה {labels.bookPlural}</h3>
+                <p className="text-sm text-gray-500">בחר {labels.bookPlural} מרובים</p>
               </div>
             </div>
           </button>
@@ -244,8 +306,8 @@ export default function NewPlanPage() {
                 <Library className="w-7 h-7 text-primary-600" />
               </div>
               <div>
-                <h3 className="font-bold text-primary-800">סדר שלם</h3>
-                <p className="text-sm text-gray-500">בחר סדר מתוך ששה סדרי משנה</p>
+                <h3 className="font-bold text-primary-800">{labels.orderSingular} שלם</h3>
+                <p className="text-sm text-gray-500">בחר {labels.orderSingular} מתוך {labels.name}</p>
               </div>
             </div>
           </button>
@@ -259,8 +321,8 @@ export default function NewPlanPage() {
                 <Library className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h3 className="font-bold text-primary-800">ש"ס שלם</h3>
-                <p className="text-sm text-gray-500">כל ששה סדרי משנה - 63 מסכתות</p>
+                <h3 className="font-bold text-primary-800">{labels.allName}</h3>
+                <p className="text-sm text-gray-500">כל ה{labels.name} - {structure.flatMap(s => s.masechtot).length} {labels.bookPlural}</p>
               </div>
             </div>
           </button>
@@ -277,14 +339,14 @@ export default function NewPlanPage() {
           {scope === 'multiple' && selectedMasechetIds.length > 0 && (
             <div className="card bg-primary-50 border-primary-200 text-sm">
               <span className="font-bold text-primary-700">נבחרו: </span>
-              <span className="text-primary-800">{selectedMasechetIds.length} מסכתות</span>
+              <span className="text-primary-800">{selectedMasechetIds.length} {labels.bookPlural}</span>
             </div>
           )}
 
           {/* Seder selection */}
           {scope === 'seder' && (
             <div className="space-y-2">
-              {MISHNAH_STRUCTURE.map((seder) => {
+              {structure.map((seder) => {
                 const sederTotal = seder.masechtot.reduce(
                   (sum, m) => sum + (unit === 'mishnah' ? getTotalMishnayot(m) : m.chapters.length), 0
                 );
@@ -301,9 +363,9 @@ export default function NewPlanPage() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-400">
-                        {seder.masechtot.length} מסכתות • {sederTotal} {unit === 'mishnah' ? 'משניות' : 'פרקים'}
+                        {seder.masechtot.length} {labels.bookPlural} • {sederTotal} {getUnitLabel(contentType, unit)}
                       </span>
-                      <span className="text-lg font-bold text-primary-800">סדר {seder.name}</span>
+                      <span className="text-lg font-bold text-primary-800">{labels.orderSingular} {seder.name}</span>
                     </div>
                   </button>
                 );
@@ -314,7 +376,7 @@ export default function NewPlanPage() {
           {/* Masechet selection (single or multiple) */}
           {(scope === 'single' || scope === 'multiple') && (
             <>
-              {MISHNAH_STRUCTURE.map((seder) => (
+              {structure.map((seder) => (
                 <div key={seder.id}>
                   {scope === 'multiple' && (
                     <div className="flex items-center justify-between mb-2">
@@ -332,11 +394,11 @@ export default function NewPlanPage() {
                       >
                         {seder.masechtot.every(m => selectedMasechetIds.includes(m.id)) ? 'הסר הכל' : 'בחר הכל'}
                       </button>
-                      <h3 className="font-bold text-primary-600 text-sm">סדר {seder.name}</h3>
+                      <h3 className="font-bold text-primary-600 text-sm">{labels.orderSingular} {seder.name}</h3>
                     </div>
                   )}
                   {scope === 'single' && (
-                    <h3 className="font-bold text-primary-600 mb-2 text-sm">סדר {seder.name}</h3>
+                    <h3 className="font-bold text-primary-600 mb-2 text-sm">{labels.orderSingular} {seder.name}</h3>
                   )}
                   <div className="grid grid-cols-2 gap-2 mb-4">
                     {seder.masechtot.map((m) => {
@@ -363,7 +425,9 @@ export default function NewPlanPage() {
                             )}
                           </div>
                           <span className="text-xs text-gray-500 block mt-1">
-                            {m.chapters.length} פרקים • {getTotalMishnayot(m)} משניות
+                            {m.chapters.length} {labels.chapterPlural}
+                            {contentType === 'mishnah' && ` • ${getTotalMishnayot(m)} משניות`}
+                            {contentType === 'gemara' && ` ${labels.chapterPlural}`}
                           </span>
                         </button>
                       );
@@ -378,7 +442,7 @@ export default function NewPlanPage() {
                   disabled={selectedMasechetIds.length === 0}
                   className="btn-primary w-full sticky bottom-20"
                 >
-                  המשך עם {selectedMasechetIds.length} מסכתות
+                  המשך עם {selectedMasechetIds.length} {labels.bookPlural}
                 </button>
               )}
             </>
@@ -392,7 +456,7 @@ export default function NewPlanPage() {
           <div className="text-center mb-4">
             <h2 className="text-xl font-bold text-primary-800">{planName}</h2>
             <p className="text-sm text-gray-500">
-              {masechetIds.length} מסכתות • {totalUnits} {unit === 'mishnah' ? 'משניות' : 'פרקים'}
+              {masechetIds.length} {labels.bookPlural} • {totalUnits} {getUnitLabel(contentType, unit)}
             </p>
           </div>
 
@@ -412,7 +476,7 @@ export default function NewPlanPage() {
           {mode === 'by_pace' && (
             <div className="card">
               <label className="block font-bold text-primary-700 mb-2">
-                כמות {unit === 'mishnah' ? 'משניות' : 'פרקים'} ליום
+                כמות {getUnitLabel(contentType, unit)} ליום
               </label>
               <div className="flex items-center gap-3">
                 <button
@@ -496,7 +560,7 @@ export default function NewPlanPage() {
             const preview = getPreview();
             if (!preview) return null;
 
-            const unitLabel = unit === 'mishnah' ? 'משניות' : 'פרקים';
+            const unitLabel = getUnitLabel(contentType, unit);
             const hasDistribution = 'distribution' in preview && preview.distribution && !preview.distribution.isExact;
 
             return (
@@ -545,7 +609,7 @@ export default function NewPlanPage() {
                   )}
                   <p className="text-sm text-gray-600 mt-1">
                     סה"כ {preview.totalUnits} {unitLabel}
-                    {masechetIds.length > 1 && ` ב-${masechetIds.length} מסכתות`}
+                    {masechetIds.length > 1 && ` ב-${masechetIds.length} ${labels.bookPlural}`}
                   </p>
                 </div>
 

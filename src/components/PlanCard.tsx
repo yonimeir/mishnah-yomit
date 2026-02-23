@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { BookOpen, Calendar, Trophy, ChevronLeft } from 'lucide-react';
 import { type LearningPlan, getSkippedUnitsCount, getPreLearnedUnitsCount } from '../store/usePlanStore';
 import { getAmountForPosition } from '../services/scheduler';
+import { getUnitLabel, getContentTypeLabels } from '../data/mishnah-structure';
 
 interface PlanCardProps {
   plan: LearningPlan;
@@ -14,6 +15,9 @@ export default function PlanCard({ plan }: PlanCardProps) {
   const effectiveLearned = plan.currentPosition - holesCount + preLearnedCount;
   const progress = Math.round((effectiveLearned / plan.totalUnits) * 100);
   const todayAmount = getAmountForPosition(plan.currentPosition, plan.calculatedAmountPerDay, plan.distribution);
+  const ct = plan.contentType || 'mishnah';
+  const unitLabel = getUnitLabel(ct, plan.unit);
+  const ctLabels = getContentTypeLabels(ct);
 
   return (
     <button
@@ -40,11 +44,11 @@ export default function PlanCard({ plan }: PlanCardProps) {
           {plan.mode === 'by_book' ? 'לפי ספר' : 'לפי קצב'}
         </span>
         <span>
-          {plan.unit === 'mishnah' ? 'משניות' : 'פרקים'} •{' '}
+          {unitLabel} •{' '}
           {todayAmount} ליום
         </span>
         {plan.masechetIds.length > 1 && (
-          <span className="text-xs text-gray-400">{plan.masechetIds.length} מסכתות</span>
+          <span className="text-xs text-gray-400">{plan.masechetIds.length} {ctLabels.bookPlural}</span>
         )}
       </div>
 
@@ -60,7 +64,7 @@ export default function PlanCard({ plan }: PlanCardProps) {
       <div className="flex justify-between text-sm">
         <span className="text-gray-500">
           {plan.currentPosition} / {plan.totalUnits}{' '}
-          {plan.unit === 'mishnah' ? 'משניות' : 'פרקים'}
+          {unitLabel}
         </span>
         <span className="font-bold text-primary-700">{progress}%</span>
       </div>

@@ -198,7 +198,7 @@ export default function LearningPage() {
         </div>
       )}
 
-      {/* Mishnah text */}
+      {/* Text content */}
       <MishnahTextDisplay
         sefariaRef={chapterRef}
         sefariaName={currentItem.sefariaName}
@@ -206,6 +206,7 @@ export default function LearningPage() {
         fromMishnah={currentItem.fromMishnah}
         toMishnah={currentItem.toMishnah}
         masechetName={currentItem.masechetName}
+        contentType={plan.contentType || 'mishnah'}
       />
 
       {/* Bottom navigation */}
