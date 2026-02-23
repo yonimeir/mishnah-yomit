@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { HDate, months, Locale } from '@hebcal/core';
+import { HDate, months } from '@hebcal/core';
 import { ChevronRight, ChevronLeft, Calendar } from 'lucide-react';
 
 interface HebrewDatePickerProps {
@@ -27,11 +27,8 @@ const HEB_MONTH_NAMES: Record<number, string> = {
 const HEB_DAY_HEADERS = ['א\'', 'ב\'', 'ג\'', 'ד\'', 'ה\'', 'ו\'', 'ש\''];
 
 function hebrewYear(hd: HDate): string {
-  // Get Hebrew year as letters
   const year = hd.getFullYear();
-  const thousands = Math.floor(year / 1000);
   const remainder = year % 1000;
-  // Typically we show just the last 3 digits for years like 5786 → תשפ"ו
   return formatHebrewNumber(remainder);
 }
 

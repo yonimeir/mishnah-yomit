@@ -13,7 +13,6 @@ import {
 import {
   calculateByBookScheduleMulti,
   calculateByPaceScheduleMulti,
-  gematriya,
   type DistributionInfo,
 } from '../services/scheduler';
 import type { FrequencyType, ScheduleFrequency } from '../services/scheduler';
@@ -80,8 +79,6 @@ export default function NewPlanPage() {
     }
     return null;
   };
-
-  const canProceedToSettings = masechetIds.length > 0;
 
   const handleCreate = () => {
     if (masechetIds.length === 0 || !mode) return;

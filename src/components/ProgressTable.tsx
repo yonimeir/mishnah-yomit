@@ -305,7 +305,6 @@ function SmartMishnahGrid({
         const chapterStartGlobal = offset + localIndex;
         const chapterEndGlobal = chapterStartGlobal + count;
         const chapterCompleted = currentPosition >= chapterEndGlobal;
-        const chapterInProgress = currentPosition > chapterStartGlobal && currentPosition < chapterEndGlobal;
         const chapterNotStarted = currentPosition <= chapterStartGlobal;
         const isSkipped = chapterCompleted && isChapterSkipped(plan, masechet.id, chIdx + 1);
         const isPreLearned = !chapterCompleted && isChapterPreLearned(plan, masechet.id, chIdx + 1);

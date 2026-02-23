@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, Check } from 'lucide-react';
 import { usePlanStore } from '../store/usePlanStore';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { BookOpen, Trash2, RotateCcw, Play, CheckCheck, AlertTriangle, Settings, Check } from 'lucide-react';
+import { BookOpen, Trash2, RotateCcw, Play, CheckCheck, AlertTriangle, Settings } from 'lucide-react';
 import { usePlanStore, getSkippedUnitsCount, getPreLearnedUnitsCount } from '../store/usePlanStore';
 import { globalToLocal, indexToRef } from '../data/mishnah-structure';
 import { gematriya, getLearningItemsForDay, getAmountForPosition } from '../services/scheduler';

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { X, ChevronDown, ChevronUp, Check } from 'lucide-react';
+import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   getMasechet,
   getMasechetUnits,
@@ -147,7 +147,7 @@ export default function AlreadyLearnedModal({ plan, onClose }: AlreadyLearnedMod
 
           {/* Masechet list */}
           <div className="space-y-2">
-            {masechetInfos.map(({ masechet, id, units, fullyPassed }) => {
+            {masechetInfos.map(({ masechet, id, fullyPassed }) => {
               const isExpanded = expandedMasechtot.has(id);
               const numSelected = selectedInMasechet(id);
               const existingPreLearned = (plan.preLearnedChapters || []).filter(

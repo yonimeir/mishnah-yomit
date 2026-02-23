@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react';
-import { X, Plus, Minus, ChevronUp, ChevronDown, Trash2, BookOpen } from 'lucide-react';
+import { X, Plus, Minus, ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
 import {
   MISHNAH_STRUCTURE,
   getMasechet,
   getTotalMishnayot,
-  getMultiMasechetTotalUnits,
 } from '../data/mishnah-structure';
 import type { DistributionInfo } from '../services/scheduler';
 import { usePlanStore, type LearningPlan } from '../store/usePlanStore';
@@ -60,7 +59,6 @@ export default function PlanSettingsModal({ plan, onClose }: PlanSettingsModalPr
               plan={plan}
               addMasechtot={addMasechtot}
               reorderMasechtot={reorderMasechtot}
-              onClose={onClose}
             />
           )}
         </div>
@@ -177,12 +175,10 @@ function MasechtotSettings({
   plan,
   addMasechtot,
   reorderMasechtot,
-  onClose,
 }: {
   plan: LearningPlan;
   addMasechtot: (planId: string, ids: string[], insertAt?: number) => void;
   reorderMasechtot: (planId: string, newOrder: string[]) => void;
-  onClose: () => void;
 }) {
   const [showAddPicker, setShowAddPicker] = useState(false);
   const [selectedToAdd, setSelectedToAdd] = useState<string[]>([]);

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { FrequencyType, ScheduleFrequency, DistributionInfo } from '../services/scheduler';
+import type { ScheduleFrequency, DistributionInfo } from '../services/scheduler';
 import type { LearningUnit } from '../data/mishnah-structure';
 
 export interface SkippedChapter {

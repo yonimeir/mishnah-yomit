@@ -1,8 +1,5 @@
 import {
-  type Masechet,
   type LearningUnit,
-  getMasechet,
-  getMasechetUnits,
   getMultiMasechetTotalUnits,
   globalToLocal,
   indexToRef,
@@ -207,7 +204,6 @@ export function getLearningItemsForDay(
     if (!loc) break;
 
     const { masechet, positionInMasechet } = loc;
-    const masechetTotalUnits = getMasechetUnits(masechet, unit);
 
     if (unit === 'perek') {
       const chapterIndex = positionInMasechet;
