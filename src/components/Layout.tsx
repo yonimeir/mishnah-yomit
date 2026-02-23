@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom';
-import { BookOpen, Home, Plus } from 'lucide-react';
+import { BookOpen, Home, Plus, Search } from 'lucide-react';
 
 export default function Layout() {
   return (
@@ -32,6 +32,17 @@ export default function Layout() {
           >
             <Home className="w-5 h-5 mb-1" />
             ראשי
+          </NavLink>
+          <NavLink
+            to="/free"
+            className={({ isActive }) =>
+              `flex-1 flex flex-col items-center py-3 text-sm transition-colors ${
+                isActive ? 'text-primary-700 font-bold' : 'text-gray-500'
+              }`
+            }
+          >
+            <Search className="w-5 h-5 mb-1" />
+            לימוד חופשי
           </NavLink>
           <NavLink
             to="/new-plan"
