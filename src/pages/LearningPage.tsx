@@ -292,6 +292,7 @@ export default function LearningPage() {
         toMishnah={currentItem.toMishnah}
         masechetName={currentItem.masechetName}
         contentType={plan.contentType || 'mishnah'}
+        masechetId={currentItem.masechetId}
       />
 
       {/* Bottom navigation */}

@@ -292,6 +292,7 @@ export default function FreeLearningPage() {
             toMishnah={selectedMasechet.chapters[selectedChapter - 1]}
             masechetName={selectedMasechet.name}
             contentType={contentType}
+            masechetId={selectedMasechet.id}
           />
 
           {/* Mark as learned */}

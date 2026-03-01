@@ -13,6 +13,7 @@ interface MishnahTextProps {
   toMishnah: number;
   masechetName: string;
   contentType?: ContentType;
+  masechetId?: string;
 }
 
 interface MishnahCommentaries {
@@ -29,6 +30,7 @@ export default function MishnahTextDisplay({
   toMishnah,
   masechetName,
   contentType = 'mishnah',
+  masechetId,
 }: MishnahTextProps) {
   const commentators = getCommentatorsForType(contentType);
   const [text, setText] = useState<MishnahTextType | null>(null);
@@ -45,7 +47,9 @@ export default function MishnahTextDisplay({
     : sefariaRef;
 
   // Handle Gemara-specific references
-  const masechet = getMasechet(sefariaRef.split(' ')[0]) || getMasechet(`g_${sefariaRef.split(' ').map(s => s.toLowerCase()).join('_')}`);
+  const masechet = masechetId
+    ? getMasechet(masechetId)
+    : (getMasechet(sefariaRef.split(' ')[0]) || getMasechet(`g_${sefariaRef.split(' ').map(s => s.toLowerCase()).join('_')}`));
 
   if (contentType === 'gemara' && masechet) {
     // Sefaria refs for Gemara passed in are usually just 'Masechet N' (where N is the 1-based index)
