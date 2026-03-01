@@ -1,7 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   MISHNAH_STRUCTURE,
+  getMasechet,
+  getSederForMasechet,
   type Masechet,
 } from '../data/mishnah-structure';
 import { gematriya } from '../services/scheduler';
@@ -10,13 +13,42 @@ import MishnahTextDisplay from '../components/MishnahText';
 
 type View = 'sedarim' | 'masechtot' | 'perakim' | 'learning';
 
+interface FreeLearningNavState {
+  sederId?: string;
+  masechetId?: string;
+  chapter?: number;
+}
+
 export default function FreeLearningPage() {
-  const [view, setView] = useState<View>('sedarim');
-  const [selectedSederId, setSelectedSederId] = useState<string | null>(null);
-  const [selectedMasechet, setSelectedMasechet] = useState<Masechet | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number>(0);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const navState = location.state as FreeLearningNavState | null;
+
+  const [view, setView] = useState<View>(() => {
+    if (navState?.masechetId && navState?.chapter != null) return 'learning';
+    return 'sedarim';
+  });
+  const [selectedSederId, setSelectedSederId] = useState<string | null>(() => {
+    if (navState?.sederId) return navState.sederId;
+    if (navState?.masechetId) {
+      const seder = getSederForMasechet(navState.masechetId);
+      return seder?.id ?? null;
+    }
+    return null;
+  });
+  const [selectedMasechet, setSelectedMasechet] = useState<Masechet | null>(() => {
+    if (navState?.masechetId) return getMasechet(navState.masechetId) ?? null;
+    return null;
+  });
+  const [selectedChapter, setSelectedChapter] = useState<number>(() => navState?.chapter ?? 0);
   const [showPlanPicker, setShowPlanPicker] = useState(false);
   const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (navState) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [navState, location.pathname, navigate]);
 
   const { plans, addPreLearnedChapters } = usePlanStore();
   const activePlans = plans.filter(p => !p.isCompleted);
@@ -140,8 +172,8 @@ export default function FreeLearningPage() {
                   key={idx}
                   onClick={() => { setSelectedChapter(ch); setView('learning'); }}
                   className={`rounded-xl p-3 text-center transition-all ${learned
-                      ? 'bg-success text-white'
-                      : 'bg-parchment-50 hover:bg-parchment-200 text-primary-800'
+                    ? 'bg-success text-white'
+                    : 'bg-parchment-50 hover:bg-parchment-200 text-primary-800'
                     }`}
                 >
                   <span className="block font-bold text-lg">{gematriya(ch)}</span>
@@ -171,10 +203,10 @@ export default function FreeLearningPage() {
                   key={idx}
                   onClick={() => setSelectedChapter(ch)}
                   className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${isCurrent
-                      ? 'bg-primary-700 text-white ring-2 ring-primary-300 ring-offset-1'
-                      : learned
-                        ? 'bg-success text-white'
-                        : 'bg-parchment-200 text-gray-600 hover:bg-parchment-300'
+                    ? 'bg-primary-700 text-white ring-2 ring-primary-300 ring-offset-1'
+                    : learned
+                      ? 'bg-success text-white'
+                      : 'bg-parchment-200 text-gray-600 hover:bg-parchment-300'
                     }`}
                 >
                   {gematriya(ch)}
@@ -266,17 +298,17 @@ export default function FreeLearningPage() {
                       onClick={() => !alreadyLearned && togglePlanSelection(plan.id)}
                       disabled={alreadyLearned}
                       className={`w-full flex items-center gap-3 py-2 px-3 rounded-xl text-right transition-all ${alreadyLearned
-                          ? 'bg-green-50 opacity-60'
-                          : isSelected
-                            ? 'bg-primary-100 ring-2 ring-primary-400'
-                            : 'bg-parchment-50 hover:bg-parchment-100'
+                        ? 'bg-green-50 opacity-60'
+                        : isSelected
+                          ? 'bg-primary-100 ring-2 ring-primary-400'
+                          : 'bg-parchment-50 hover:bg-parchment-100'
                         }`}
                     >
                       <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${alreadyLearned
-                          ? 'bg-success border-success text-white'
-                          : isSelected
-                            ? 'bg-primary-600 border-primary-600 text-white'
-                            : 'border-gray-300'
+                        ? 'bg-success border-success text-white'
+                        : isSelected
+                          ? 'bg-primary-600 border-primary-600 text-white'
+                          : 'border-gray-300'
                         }`}>
                         {(alreadyLearned || isSelected) && <Check className="w-3 h-3" />}
                       </div>
