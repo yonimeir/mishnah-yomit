@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { fetchChapter, fetchCommentary, type MishnahText as MishnahTextType, getCommentatorsForType } from '../services/sefaria';
 import { gematriya } from '../services/scheduler';
 import { Loader2, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
-import { type ContentType, getGemaraAmudRef, dafToDisplay } from '../data/mishnah-structure';
+import { type ContentType, getGemaraAmudRef, formatGemaraItem } from '../data/mishnah-structure';
 import { getMasechet } from '../data/mishnah-structure';
 
 interface MishnahTextProps {
@@ -165,16 +165,11 @@ export default function MishnahTextDisplay({
       <div className="text-center mb-4">
         <h2 className="text-xl font-bold text-primary-800 font-serif-hebrew">
           {contentType === 'rambam' ? 'הלכות' : contentType === 'gemara' ? 'מסכת' : 'מסכת'} {masechetName}{' '}
-          {contentType === 'gemara' ? `דף ${masechet ? dafToDisplay(masechet, chapter - 1) : chapter + 1}` : `פרק ${gematriya(chapter)}`}
+          {contentType === 'gemara' ? formatGemaraItem(masechet, chapter, fromMishnah, toMishnah) : `פרק ${gematriya(chapter)}`}
         </h2>
         {contentType !== 'gemara' && fromMishnah !== toMishnah && (
           <p className="text-sm text-gray-500 mt-1">
             {contentType === 'rambam' ? 'הלכות' : 'משניות'} {gematriya(fromMishnah)} - {gematriya(toMishnah)}
-          </p>
-        )}
-        {contentType === 'gemara' && (
-          <p className="text-sm text-gray-500 mt-1">
-            עמוד {gematriya(fromMishnah)}
           </p>
         )}
       </div>

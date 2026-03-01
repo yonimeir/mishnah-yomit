@@ -1,5 +1,6 @@
 import { GEMARA_STRUCTURE } from './gemara-structure';
 import { RAMBAM_STRUCTURE } from './rambam-structure';
+import { gematriya } from '../services/scheduler';
 
 export interface Masechet {
   id: string;
@@ -92,7 +93,32 @@ export function getGemaraAmudRef(masechet: Masechet, chapterIndex: number, amudI
 /** Convert daf number to Hebrew display (e.g., "ב" for daf 2) */
 export function dafToDisplay(masechet: Masechet, chapterIndex: number): string {
   const startDaf = masechet.startDaf ?? 2;
-  return String(startDaf + chapterIndex);
+  return gematriya(startDaf + chapterIndex);
+}
+
+/** Format a single global position point for a Gemara plan into "דף ב." */
+export function formatGemaraPoint(masechet: Masechet, amudIndex: number): string {
+  const ref = indexToRef(masechet, amudIndex);
+  const daf = dafToDisplay(masechet, ref.chapter - 1);
+  const amudSymbol = ref.mishnah === 1 ? '.' : ':';
+  return `דף ${daf}${amudSymbol}`;
+}
+
+/** Format a daily learning item for a Gemara plan into "דף ב." or "דף ב" (full page) */
+export function formatGemaraItem(masechet: Masechet | undefined, chapter: number, fromAmud: number, toAmud: number): string {
+  if (!masechet) return `דף ${gematriya(chapter + 1)}`; // fallback
+  const daf = dafToDisplay(masechet, chapter - 1);
+
+  if (fromAmud === 1 && toAmud === 1) {
+    return `דף ${daf}.`;
+  } else if (fromAmud === 2 && toAmud === 2) {
+    return `דף ${daf}:`;
+  } else if (fromAmud === 1 && toAmud === 2) {
+    return `דף ${daf}`; // complete daf
+  } else {
+    // Spans multiple dafim (less common for a single item, but just in case)
+    return `דף ${daf}`;
+  }
 }
 
 export const MISHNAH_STRUCTURE: Seder[] = [

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BookOpen, Trash2, RotateCcw, Play, CheckCheck, AlertTriangle, Settings } from 'lucide-react';
 import { usePlanStore, getSkippedUnitsCount, getPreLearnedUnitsCount } from '../store/usePlanStore';
-import { globalToLocal, indexToRef, getUnitLabel, getContentTypeLabels, dafToDisplay, getMasechet } from '../data/mishnah-structure';
+import { globalToLocal, indexToRef, getUnitLabel, getContentTypeLabels, getMasechet, formatGemaraPoint, formatGemaraItem } from '../data/mishnah-structure';
 import { gematriya, getLearningItemsForDay, getAmountForPosition } from '../services/scheduler';
 import ProgressTable from '../components/ProgressTable';
 import AlreadyLearnedModal from '../components/AlreadyLearnedModal';
@@ -165,7 +165,7 @@ export default function PlanDetailPage() {
           <p className="font-bold text-primary-800">
             {plan.masechetIds.length > 1 && `מסכת ${currentLoc.masechet.name} • `}
             {plan.contentType === 'gemara'
-              ? `דף ${dafToDisplay(currentLoc.masechet, currentLoc.positionInMasechet)}`
+              ? formatGemaraPoint(currentLoc.masechet, currentLoc.positionInMasechet)
               : (plan.unit === 'mishnah'
                 ? (() => {
                   const ref = indexToRef(currentLoc.masechet, currentLoc.positionInMasechet);
@@ -191,10 +191,7 @@ export default function PlanDetailPage() {
                 <span className="font-bold text-primary-800">
                   {plan.masechetIds.length > 1 && <span className="text-xs text-gray-500 ml-2">{item.masechetName}</span>}
                   {plan.contentType === 'gemara' ? (
-                    <>
-                      דף {getMasechet(item.masechetId) ? dafToDisplay(getMasechet(item.masechetId)!, item.chapter - 1) : item.chapter + 1}
-                      {item.fromMishnah === 1 ? ' ע"א' : item.fromMishnah === 2 ? ' ע"ב' : ''}
-                    </>
+                    formatGemaraItem(getMasechet(item.masechetId), item.chapter, item.fromMishnah, item.toMishnah)
                   ) : (
                     <>
                       פרק {gematriya(item.chapter)}{' '}

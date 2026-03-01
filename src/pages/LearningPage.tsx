@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, Check, BookOpen } from 'lucide-react';
 import { usePlanStore } from '../store/usePlanStore';
 import { getLearningItemsForDay, getAmountForPosition, gematriya } from '../services/scheduler';
-import { getMasechet, getMasechetUnits, globalToLocal, getSederForMasechet, dafToDisplay } from '../data/mishnah-structure';
+import { getMasechet, getMasechetUnits, globalToLocal, getSederForMasechet, formatGemaraItem } from '../data/mishnah-structure';
 import MishnahTextDisplay from '../components/MishnahText';
 import CompletionCelebration from '../components/CompletionCelebration';
 import NextMasechetModal from '../components/NextMasechetModal';
@@ -268,10 +268,7 @@ export default function LearningPage() {
             >
               {plan.masechetIds.length > 1 && `${item.masechetName} `}
               {plan.contentType === 'gemara' ? (
-                <>
-                  דף {getMasechet(item.masechetId) ? dafToDisplay(getMasechet(item.masechetId)!, item.chapter - 1) : item.chapter + 1}
-                  {item.fromMishnah === 1 ? ' ע"א' : item.fromMishnah === 2 ? ' ע"ב' : ''}
-                </>
+                formatGemaraItem(getMasechet(item.masechetId), item.chapter, item.fromMishnah, item.toMishnah)
               ) : (
                 <>
                   {gematriya(item.chapter)}
