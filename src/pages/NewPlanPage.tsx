@@ -274,8 +274,12 @@ export default function NewPlanPage() {
                 <BookMarked className="w-7 h-7 text-primary-600" />
               </div>
               <div>
-                <h3 className="font-bold text-primary-800">{labels.bookSingular} {contentType === 'rambam' ? 'אחד' : 'אחת'}</h3>
-                <p className="text-sm text-gray-500">בחר {labels.bookSingular} {contentType === 'rambam' ? 'ספציפי' : 'ספציפית'}</p>
+                <h3 className="font-bold text-primary-800">
+                  {contentType === 'rambam' ? 'קובץ הלכות אחד' : `${labels.bookSingular} אחת`}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {contentType === 'rambam' ? 'בחר קובץ ספציפי' : `בחר ${labels.bookSingular} ספציפית`}
+                </p>
               </div>
             </div>
           </button>
@@ -290,7 +294,9 @@ export default function NewPlanPage() {
               </div>
               <div>
                 <h3 className="font-bold text-primary-800">כמה {labels.bookPlural}</h3>
-                <p className="text-sm text-gray-500">בחר {labels.bookPlural} מרובים</p>
+                <p className="text-sm text-gray-500">
+                  בחר {labels.bookPlural} {contentType === 'rambam' ? 'מרובים' : 'מרובות'}
+                </p>
               </div>
             </div>
           </button>
@@ -618,8 +624,8 @@ export default function NewPlanPage() {
                       <button
                         onClick={() => setDistributionStrategy('tapered')}
                         className={`w-full rounded-xl p-3 text-right transition-all border-2 ${distributionStrategy === 'tapered'
-                            ? 'border-primary-500 bg-primary-50'
-                            : 'border-parchment-200 bg-white hover:border-parchment-300'
+                          ? 'border-primary-500 bg-primary-50'
+                          : 'border-parchment-200 bg-white hover:border-parchment-300'
                           }`}
                       >
                         <div className="flex items-center gap-3">
@@ -640,8 +646,8 @@ export default function NewPlanPage() {
                       <button
                         onClick={() => setDistributionStrategy('even')}
                         className={`w-full rounded-xl p-3 text-right transition-all border-2 ${distributionStrategy === 'even'
-                            ? 'border-primary-500 bg-primary-50'
-                            : 'border-parchment-200 bg-white hover:border-parchment-300'
+                          ? 'border-primary-500 bg-primary-50'
+                          : 'border-parchment-200 bg-white hover:border-parchment-300'
                           }`}
                       >
                         <div className="flex items-center gap-3">
