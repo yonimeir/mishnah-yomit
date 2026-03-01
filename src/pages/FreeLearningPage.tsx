@@ -2,6 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, ChevronDown, ChevronUp, BookOpen, ScrollText, Scale } from 'lucide-react';
 import {
+  MISHNAH_STRUCTURE,
+  getMasechet,
+  getSederForMasechet,
   type Masechet,
   type ContentType,
   getMasechet,
@@ -54,7 +57,7 @@ export default function FreeLearningPage() {
     if (navState) {
       navigate(location.pathname, { replace: true, state: null });
     }
-  }, []);
+  }, [navState, location.pathname, navigate]);
 
   const { plans, addPreLearnedChapters } = usePlanStore();
   const activePlans = plans.filter(p => !p.isCompleted);
@@ -239,11 +242,10 @@ export default function FreeLearningPage() {
                 <button
                   key={idx}
                   onClick={() => { setSelectedChapter(ch); setView('learning'); }}
-                  className={`rounded-xl p-3 text-center transition-all ${
-                    learned
-                      ? 'bg-success text-white'
-                      : 'bg-parchment-50 hover:bg-parchment-200 text-primary-800'
-                  }`}
+                  className={`rounded-xl p-3 text-center transition-all ${learned
+                    ? 'bg-success text-white'
+                    : 'bg-parchment-50 hover:bg-parchment-200 text-primary-800'
+                    }`}
                 >
                   <span className="block font-bold text-lg">{getChapterLabel(selectedMasechet, idx)}</span>
                   <span className={`text-xs ${learned ? 'text-white/80' : 'text-gray-400'}`}>
@@ -271,13 +273,12 @@ export default function FreeLearningPage() {
                 <button
                   key={idx}
                   onClick={() => setSelectedChapter(ch)}
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
-                    isCurrent
-                      ? 'bg-primary-700 text-white ring-2 ring-primary-300 ring-offset-1'
-                      : learned
-                        ? 'bg-success text-white'
-                        : 'bg-parchment-200 text-gray-600 hover:bg-parchment-300'
-                  }`}
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${isCurrent
+                    ? 'bg-primary-700 text-white ring-2 ring-primary-300 ring-offset-1'
+                    : learned
+                      ? 'bg-success text-white'
+                      : 'bg-parchment-200 text-gray-600 hover:bg-parchment-300'
+                    }`}
                 >
                   {getChapterLabel(selectedMasechet, idx)}
                 </button>
@@ -297,7 +298,7 @@ export default function FreeLearningPage() {
           />
 
           {/* Mark as learned */}
-          <div className="sticky bottom-20 bg-parchment-100/95 backdrop-blur-sm py-3 space-y-2">
+          <div className="mt-6 py-4 border-t border-parchment-200 space-y-2">
             {isChapterLearnedInAnyPlan(selectedMasechet.id, selectedChapter) ? (
               <>
                 <div className="flex items-center justify-center gap-2 text-success font-bold py-2">
@@ -367,21 +368,19 @@ export default function FreeLearningPage() {
                       key={plan.id}
                       onClick={() => !alreadyLearned && togglePlanSelection(plan.id)}
                       disabled={alreadyLearned}
-                      className={`w-full flex items-center gap-3 py-2 px-3 rounded-xl text-right transition-all ${
-                        alreadyLearned
-                          ? 'bg-green-50 opacity-60'
-                          : isSelected
-                            ? 'bg-primary-100 ring-2 ring-primary-400'
-                            : 'bg-parchment-50 hover:bg-parchment-100'
-                      }`}
+                      className={`w-full flex items-center gap-3 py-2 px-3 rounded-xl text-right transition-all ${alreadyLearned
+                        ? 'bg-green-50 opacity-60'
+                        : isSelected
+                          ? 'bg-primary-100 ring-2 ring-primary-400'
+                          : 'bg-parchment-50 hover:bg-parchment-100'
+                        }`}
                     >
-                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
-                        alreadyLearned
-                          ? 'bg-success border-success text-white'
-                          : isSelected
-                            ? 'bg-primary-600 border-primary-600 text-white'
-                            : 'border-gray-300'
-                      }`}>
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${alreadyLearned
+                        ? 'bg-success border-success text-white'
+                        : isSelected
+                          ? 'bg-primary-600 border-primary-600 text-white'
+                          : 'border-gray-300'
+                        }`}>
                         {(alreadyLearned || isSelected) && <Check className="w-3 h-3" />}
                       </div>
                       <div className="flex-1">

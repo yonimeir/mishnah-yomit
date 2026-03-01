@@ -87,10 +87,9 @@ export default function HebrewDatePicker({ value, onChange, minDate }: HebrewDat
   const [viewYear, setViewYear] = useState(initial.getFullYear());
   const [viewMonth, setViewMonth] = useState(initial.getMonth()); // 0-based
 
-  const minDateObj = minDate ? new Date(minDate) : undefined;
-
   // Generate calendar days for the current view month
   const calendarDays = useMemo(() => {
+    const minDateObj = minDate ? new Date(minDate) : undefined;
     const firstDay = new Date(viewYear, viewMonth, 1);
     const lastDay = new Date(viewYear, viewMonth + 1, 0);
     const startDayOfWeek = firstDay.getDay(); // 0=Sun

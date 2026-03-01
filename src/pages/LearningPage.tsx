@@ -261,11 +261,10 @@ export default function LearningPage() {
             <button
               key={idx}
               onClick={() => setCurrentItemIdx(idx)}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                idx === currentItemIdx
-                  ? 'bg-primary-700 text-white'
-                  : 'bg-parchment-200 text-gray-600'
-              }`}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${idx === currentItemIdx
+                ? 'bg-primary-700 text-white'
+                : 'bg-parchment-200 text-gray-600'
+                }`}
             >
               {plan.masechetIds.length > 1 && `${item.masechetName} `}
               {gematriya(item.chapter)}
@@ -287,7 +286,7 @@ export default function LearningPage() {
       />
 
       {/* Bottom navigation */}
-      <div className="sticky bottom-20 bg-parchment-100/95 backdrop-blur-sm py-3 flex gap-3">
+      <div className="mt-6 py-4 flex gap-3 border-t border-parchment-200">
         {currentItemIdx > 0 && (
           <button
             onClick={() => setCurrentItemIdx(currentItemIdx - 1)}
