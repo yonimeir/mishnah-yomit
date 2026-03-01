@@ -187,23 +187,36 @@ export default function MishnahTextDisplay({
         const mishnahIdx = mishnahNum - 1;           // 0-based for Sefaria
         const activeCommentator = openCommentary[mishnahIdx];
 
+        const handleTextClick = () => {
+          if (contentType !== 'gemara') return;
+          // If a commentary is open, close it. Otherwise, open the first commentator (e.g., Rashi)
+          if (activeCommentator) {
+            setOpenCommentary(prev => ({ ...prev, [mishnahIdx]: null }));
+          } else if (commentators.length > 0) {
+            toggleCommentary(mishnahIdx, commentators[0].id, commentators[0].sefariaName);
+          }
+        };
+
         return (
-          <div key={idx} className={contentType === 'gemara' ? "mb-6" : "card overflow-hidden"}>
+          <div key={idx} className={contentType === 'gemara' ? "mb-6 group" : "card overflow-hidden"}>
             {/* Mishnah text */}
-            <div className={`flex items-start gap-3 mb-3 ${contentType === 'gemara' ? 'px-2' : ''}`}>
+            <div
+              className={`flex items-start gap-3 mb-3 ${contentType === 'gemara' ? 'px-2 cursor-pointer hover:bg-parchment-50 rounded-lg p-2 transition-colors' : ''}`}
+              onClick={handleTextClick}
+            >
               {contentType !== 'gemara' && (
                 <span className="bg-primary-100 text-primary-700 rounded-lg px-2 py-1 text-sm font-bold shrink-0">
                   {gematriya(mishnahNum)}
                 </span>
               )}
               <div
-                className="font-serif-hebrew text-lg leading-relaxed text-gray-800"
+                className={`font-serif-hebrew text-lg leading-relaxed ${activeCommentator && contentType === 'gemara' ? 'text-primary-800' : 'text-gray-800'}`}
                 dangerouslySetInnerHTML={{ __html: stripHtmlTags(mishnahHtml) }}
               />
             </div>
 
             {/* Commentary selector row */}
-            <div className={`flex items-center gap-2 pt-2 ${contentType === 'gemara' ? 'opacity-60 hover:opacity-100 transition-opacity px-2' : 'border-t border-parchment-200'}`}>
+            <div className={`flex items-center gap-2 pt-2 ${contentType === 'gemara' ? (activeCommentator ? 'opacity-100 px-2' : 'opacity-0 h-0 overflow-hidden group-hover:opacity-100 transition-opacity px-2') : 'border-t border-parchment-200'}`}>
               <MessageCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
               {commentators.map((c) => {
                 const isActive = activeCommentator === c.id;
