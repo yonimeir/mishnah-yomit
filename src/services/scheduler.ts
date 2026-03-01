@@ -25,7 +25,7 @@ export interface LearningItem {
 }
 
 /** Check if a given date is a learning day based on frequency */
-function isLearningDay(date: Date, freq: ScheduleFrequency, _dayCount: number): boolean {
+function isLearningDay(date: Date, freq: ScheduleFrequency): boolean {
   const dayOfWeek = date.getDay();
 
   if (freq.type === 'specific_days') {
@@ -62,11 +62,9 @@ function getSpreadDays(total: number, count: number): number[] {
 function countLearningDays(startDate: Date, endDate: Date, freq: ScheduleFrequency): number {
   let count = 0;
   const current = new Date(startDate);
-  let dayCount = 0;
   while (current <= endDate) {
-    if (isLearningDay(current, freq, dayCount)) count++;
+    if (isLearningDay(current, freq)) count++;
     current.setDate(current.getDate() + 1);
-    dayCount++;
   }
   return count;
 }
@@ -160,7 +158,7 @@ export function calculateByPaceScheduleMulti(
   const current = new Date(startDate);
 
   while (learningDaysCounted < learningDaysNeeded) {
-    if (isLearningDay(current, frequency, totalCalendarDays)) learningDaysCounted++;
+    if (isLearningDay(current, frequency)) learningDaysCounted++;
     current.setDate(current.getDate() + 1);
     totalCalendarDays++;
   }

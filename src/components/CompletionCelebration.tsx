@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Trophy, Star, PartyPopper } from 'lucide-react';
 
 interface CompletionCelebrationProps {
@@ -7,18 +7,16 @@ interface CompletionCelebrationProps {
 }
 
 export default function CompletionCelebration({ masechetName, onClose }: CompletionCelebrationProps) {
-  const [confetti, setConfetti] = useState<Array<{ id: number; left: number; delay: number; color: string }>>([]);
-
-  useEffect(() => {
+  const [confetti] = useState(() => {
     const colors = ['#d4a843', '#1e3a5f', '#2d8a4e', '#c0392b', '#8e44ad'];
-    const items = Array.from({ length: 50 }, (_, i) => ({
+    return Array.from({ length: 50 }, (_, i) => ({
       id: i,
       left: Math.random() * 100,
       delay: Math.random() * 2,
+      duration: 1 + Math.random() * 2,
       color: colors[Math.floor(Math.random() * colors.length)],
     }));
-    setConfetti(items);
-  }, []);
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -31,7 +29,7 @@ export default function CompletionCelebration({ masechetName, onClose }: Complet
             left: `${c.left}%`,
             backgroundColor: c.color,
             animationDelay: `${c.delay}s`,
-            animationDuration: `${1 + Math.random() * 2}s`,
+            animationDuration: `${c.duration}s`,
           }}
         />
       ))}

@@ -38,22 +38,20 @@ export default function ProgressTable({ plan }: ProgressTableProps) {
   const totalHoles = getSkippedUnitsCount(plan);
   const totalPreLearned = getPreLearnedUnitsCount(plan);
 
-  let globalOffset = 0;
-  const masechtotInfo: MasechetInfo[] = plan.masechetIds.map(id => {
+  const masechtotInfo: MasechetInfo[] = plan.masechetIds.reduce<{ info: MasechetInfo[], offset: number }>((acc, id) => {
     const m = getMasechet(id);
-    if (!m) return null;
+    if (!m) return acc;
     const units = getMasechetUnits(m, plan.unit);
-    const offset = globalOffset;
-    globalOffset += units;
+    const offset = acc.offset;
 
     const masechetEnd = offset + units;
     const posInMasechet = Math.max(0, Math.min(plan.currentPosition - offset, units));
     const status: MasechetStatus =
       plan.currentPosition >= masechetEnd ? 'completed'
-      : plan.currentPosition > offset ? 'in_progress'
-      : 'not_started';
+        : plan.currentPosition > offset ? 'in_progress'
+          : 'not_started';
 
-    return {
+    acc.info.push({
       masechet: m,
       units,
       offset,
@@ -62,8 +60,10 @@ export default function ProgressTable({ plan }: ProgressTableProps) {
       progress: Math.round((posInMasechet / units) * 100),
       skippedCount: getSkippedInMasechet(plan, id),
       preLearnedCount: getPreLearnedInMasechet(plan, id),
-    };
-  }).filter(Boolean) as MasechetInfo[];
+    });
+    acc.offset += units;
+    return acc;
+  }, { info: [], offset: 0 }).info;
 
   const isMulti = plan.masechetIds.length > 1;
 
@@ -269,8 +269,7 @@ function PerekGrid({
               if (isCompleted) toggleSkippedChapter(plan.id, masechet.id, idx + 1);
             }}
             disabled={!isCompleted && !isPreLearned}
-            className={`rounded-xl p-2 text-center text-sm font-bold transition-all ${
-              isSkipped
+            className={`rounded-xl p-2 text-center text-sm font-bold transition-all ${isSkipped
                 ? 'bg-amber-400 text-white ring-2 ring-amber-300 ring-offset-1'
                 : isPreLearned
                   ? 'bg-success/80 text-white ring-1 ring-green-300'
@@ -279,7 +278,7 @@ function PerekGrid({
                     : isCurrent
                       ? 'bg-primary-500 text-white ring-2 ring-primary-300 ring-offset-2'
                       : 'bg-parchment-200 text-gray-600'
-            }`}
+              }`}
           >
             {gematriya(idx + 1)}
           </button>
@@ -297,20 +296,16 @@ function SmartMishnahGrid({
   masechet: Masechet; offset: number; currentPosition: number; plan: LearningPlan;
 }) {
   const { toggleSkippedChapter } = usePlanStore();
-  let localIndex = 0;
-
   return (
     <div className="space-y-2">
       {masechet.chapters.map((count, chIdx) => {
-        const chapterStartGlobal = offset + localIndex;
+        const chapterLocalStart = masechet.chapters.slice(0, chIdx).reduce((a, b) => a + b, 0);
+        const chapterStartGlobal = offset + chapterLocalStart;
         const chapterEndGlobal = chapterStartGlobal + count;
         const chapterCompleted = currentPosition >= chapterEndGlobal;
         const chapterNotStarted = currentPosition <= chapterStartGlobal;
         const isSkipped = chapterCompleted && isChapterSkipped(plan, masechet.id, chIdx + 1);
         const isPreLearned = !chapterCompleted && isChapterPreLearned(plan, masechet.id, chIdx + 1);
-
-        const chapterLocalStart = localIndex;
-        localIndex += count;
 
         // ── Completed chapter (tappable to toggle hole) ──
         if (chapterCompleted) {
@@ -318,11 +313,10 @@ function SmartMishnahGrid({
             <button
               key={chIdx}
               onClick={() => toggleSkippedChapter(plan.id, masechet.id, chIdx + 1)}
-              className={`flex items-center gap-2 py-1.5 px-3 rounded-xl w-full text-right transition-all ${
-                isSkipped
+              className={`flex items-center gap-2 py-1.5 px-3 rounded-xl w-full text-right transition-all ${isSkipped
                   ? 'bg-amber-100 hover:bg-amber-200 border border-amber-300'
                   : 'bg-green-50 hover:bg-green-100'
-              }`}
+                }`}
             >
               {isSkipped ? (
                 <>
@@ -371,13 +365,12 @@ function SmartMishnahGrid({
           items.push(
             <div
               key={m}
-              className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
-                isCompleted
+              className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${isCompleted
                   ? 'bg-success text-white'
                   : isCurrent
                     ? 'bg-primary-500 text-white ring-2 ring-primary-300 ring-offset-1 scale-110'
                     : 'bg-parchment-200 text-gray-500'
-              }`}
+                }`}
             >
               {gematriya(m + 1)}
             </div>

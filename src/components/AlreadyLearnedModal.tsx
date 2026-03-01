@@ -95,19 +95,22 @@ export default function AlreadyLearnedModal({ plan, onClose }: AlreadyLearnedMod
 
   // Build masechet info
   const masechetInfos = useMemo(() => {
-    let globalOffset = 0;
-    return plan.masechetIds.map(id => {
+    return plan.masechetIds.reduce<{
+      infos: Array<{ masechet: Masechet; id: string; units: number; fullyPassed: boolean; }>;
+      offset: number;
+    }>((acc, id) => {
       const m = getMasechet(id);
-      if (!m) return null;
+      if (!m) return acc;
       const units = getMasechetUnits(m, plan.unit);
-      const offset = globalOffset;
-      globalOffset += units;
+      const offset = acc.offset;
+
       const masechetEnd = offset + units;
       const fullyPassed = plan.currentPosition >= masechetEnd;
-      return { masechet: m, id, units, fullyPassed };
-    }).filter(Boolean) as Array<{
-      masechet: Masechet; id: string; units: number; fullyPassed: boolean;
-    }>;
+
+      acc.infos.push({ masechet: m, id, units, fullyPassed });
+      acc.offset += units;
+      return acc;
+    }, { infos: [], offset: 0 }).infos;
   }, [plan]);
 
   // Count selected units
@@ -178,13 +181,12 @@ export default function AlreadyLearnedModal({ plan, onClose }: AlreadyLearnedMod
                     {selectableCount > 0 && (
                       <button
                         onClick={() => toggleEntireMasechet(id, masechet)}
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                          numSelected === selectableCount && selectableCount > 0
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${numSelected === selectableCount && selectableCount > 0
                             ? 'bg-primary-600 border-primary-600 text-white'
                             : numSelected > 0
                               ? 'bg-primary-200 border-primary-400'
                               : 'border-gray-300 hover:border-primary-400'
-                        }`}
+                          }`}
                       >
                         {numSelected === selectableCount && selectableCount > 0 && <span className="text-xs">✓</span>}
                         {numSelected > 0 && numSelected < selectableCount && <span className="text-[10px] text-primary-700">—</span>}
@@ -228,15 +230,14 @@ export default function AlreadyLearnedModal({ plan, onClose }: AlreadyLearnedMod
                               key={chIdx}
                               onClick={() => toggleChapter(id, ch)}
                               disabled={behind || alreadyPL}
-                              className={`rounded-lg p-1.5 text-center text-xs font-bold transition-all ${
-                                behind
+                              className={`rounded-lg p-1.5 text-center text-xs font-bold transition-all ${behind
                                   ? 'bg-green-100 text-green-400 opacity-50 cursor-default'
                                   : alreadyPL
                                     ? 'bg-green-500 text-white cursor-default'
                                     : sel
                                       ? 'bg-primary-600 text-white'
                                       : 'bg-parchment-100 text-gray-600 hover:bg-parchment-200'
-                              }`}
+                                }`}
                             >
                               {gematriya(ch)}
                             </button>
