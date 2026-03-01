@@ -7,7 +7,7 @@ import { getMasechet } from '../data/mishnah-structure';
 
 interface MishnahTextProps {
   sefariaRef: string;
-  sefariaName: string;
+  sefariaName?: string; // Keep interface optional just in case it's passed, but we won't use it.
   chapter: number;
   fromMishnah: number;
   toMishnah: number;
@@ -24,7 +24,6 @@ interface MishnahCommentaries {
 
 export default function MishnahTextDisplay({
   sefariaRef,
-  sefariaName,
   chapter,
   fromMishnah,
   toMishnah,
@@ -101,7 +100,9 @@ export default function MishnahTextDisplay({
     // Fetch commentary for this specific mishnah
     setLoadingCommentary(prev => ({ ...prev, [cacheKey]: true }));
     try {
-      const mishnahRef = `${sefariaName} ${chapter}:${mishnahIdx + 1}`;
+      // For Mishnah/Rambam: chapterRef is "Masechet N" or "Mishneh Torah N", so appended is "Masechet N:M". 
+      // For Gemara: chapterRef is "Masechet 2a", so appended is "Masechet 2a:M" which Sefaria accepts.
+      const mishnahRef = `${chapterRef}:${mishnahIdx + 1}`;
       const data = await fetchCommentary(mishnahRef, commentatorSefariaName);
       const texts = Array.isArray(data.hebrew)
         ? data.hebrew.flat().map(t => String(t))
@@ -187,9 +188,9 @@ export default function MishnahTextDisplay({
         const activeCommentator = openCommentary[mishnahIdx];
 
         return (
-          <div key={idx} className="card overflow-hidden">
+          <div key={idx} className={contentType === 'gemara' ? "mb-6" : "card overflow-hidden"}>
             {/* Mishnah text */}
-            <div className="flex items-start gap-3 mb-3">
+            <div className={`flex items-start gap-3 mb-3 ${contentType === 'gemara' ? 'px-2' : ''}`}>
               {contentType !== 'gemara' && (
                 <span className="bg-primary-100 text-primary-700 rounded-lg px-2 py-1 text-sm font-bold shrink-0">
                   {gematriya(mishnahNum)}
@@ -202,7 +203,7 @@ export default function MishnahTextDisplay({
             </div>
 
             {/* Commentary selector row */}
-            <div className="flex items-center gap-2 border-t border-parchment-200 pt-2">
+            <div className={`flex items-center gap-2 pt-2 ${contentType === 'gemara' ? 'opacity-60 hover:opacity-100 transition-opacity px-2' : 'border-t border-parchment-200'}`}>
               <MessageCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
               {commentators.map((c) => {
                 const isActive = activeCommentator === c.id;
@@ -248,7 +249,7 @@ export default function MishnahTextDisplay({
                   </div>
                 ) : (
                   <p className="text-sm text-gray-400 text-center py-2">
-                    אין פירוש זמין למשנה זו
+                    אין פירוש זמין ל{contentType === 'mishnah' ? 'משנה' : contentType === 'rambam' ? 'הלכה' : 'קטע'} זו
                   </p>
                 )}
               </div>
