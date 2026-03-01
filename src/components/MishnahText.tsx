@@ -198,25 +198,25 @@ export default function MishnahTextDisplay({
         };
 
         return (
-          <div key={idx} className={contentType === 'gemara' ? "mb-6 group" : "card overflow-hidden"}>
+          <div key={idx} className={contentType === 'gemara' ? "group relative" : "card overflow-hidden mb-4"}>
             {/* Mishnah text */}
             <div
-              className={`flex items-start gap-3 mb-3 ${contentType === 'gemara' ? 'px-2 cursor-pointer hover:bg-parchment-50 rounded-lg p-2 transition-colors' : ''}`}
+              className={`flex items-start gap-3 ${contentType === 'gemara' ? 'px-2 cursor-pointer hover:bg-parchment-100/50 rounded transition-colors inline-block w-full' : 'mb-3'}`}
               onClick={handleTextClick}
             >
               {contentType !== 'gemara' && (
-                <span className="bg-primary-100 text-primary-700 rounded-lg px-2 py-1 text-sm font-bold shrink-0">
+                <span className="bg-primary-100 text-primary-700 rounded-lg px-2 py-1 text-sm font-bold shrink-0 mt-1">
                   {gematriya(mishnahNum)}
                 </span>
               )}
               <div
-                className={`font-serif-hebrew text-lg leading-relaxed ${activeCommentator && contentType === 'gemara' ? 'text-primary-800' : 'text-gray-800'}`}
+                className={`font-serif-hebrew text-lg leading-relaxed ${activeCommentator && contentType === 'gemara' ? 'text-primary-800 font-bold' : 'text-gray-800'}`}
                 dangerouslySetInnerHTML={{ __html: stripHtmlTags(mishnahHtml) }}
               />
             </div>
 
             {/* Commentary selector row */}
-            <div className={`flex items-center gap-2 pt-2 ${contentType === 'gemara' ? (activeCommentator ? 'opacity-100 px-2' : 'opacity-0 h-0 overflow-hidden group-hover:opacity-100 transition-opacity px-2') : 'border-t border-parchment-200'}`}>
+            <div className={`flex items-center gap-2 pt-2 ${contentType === 'gemara' ? (activeCommentator ? 'opacity-100 px-2 pb-2' : 'opacity-0 h-0 overflow-hidden group-hover:opacity-100 transition-opacity px-2') : 'border-t border-parchment-200'}`}>
               <MessageCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
               {commentators.map((c) => {
                 const isActive = activeCommentator === c.id;
@@ -241,7 +241,7 @@ export default function MishnahTextDisplay({
 
             {/* Commentary content (inline, below this mishnah) */}
             {activeCommentator && (
-              <div className="mt-3 border-t border-parchment-200 pt-3">
+              <div className={`mt-2 ${contentType === 'gemara' ? 'mx-2 mb-6 border-l-2 border-primary-500 pl-4 bg-parchment-50/50 p-4 rounded-r-lg' : 'border-t border-parchment-200 pt-3'}`}>
                 {loadingCommentary[`${activeCommentator}_${mishnahIdx}`] ? (
                   <div className="flex items-center justify-center py-4">
                     <Loader2 className="w-5 h-5 animate-spin text-primary-500" />
@@ -255,7 +255,7 @@ export default function MishnahTextDisplay({
                     {commentaries[activeCommentator][mishnahIdx].map((text, cidx) => (
                       <div
                         key={cidx}
-                        className="bg-parchment-50 rounded-xl p-3 font-serif-hebrew text-base leading-relaxed text-gray-700 border border-parchment-200"
+                        className="font-serif-hebrew text-base leading-relaxed text-gray-700"
                         dangerouslySetInnerHTML={{ __html: stripHtmlTags(text) }}
                       />
                     ))}
