@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check, BookOpen } from 'lucide-react';
 import { usePlanStore } from '../store/usePlanStore';
 import { getLearningItemsForDay, getAmountForPosition, gematriya } from '../services/scheduler';
-import { getMasechet, getMasechetUnits, globalToLocal } from '../data/mishnah-structure';
+import { getMasechet, getMasechetUnits, globalToLocal, getSederForMasechet } from '../data/mishnah-structure';
 import MishnahTextDisplay from '../components/MishnahText';
 import CompletionCelebration from '../components/CompletionCelebration';
 import NextMasechetModal from '../components/NextMasechetModal';
+
+interface ContinueInfo {
+  masechetId: string;
+  chapter: number;
+  contentType: 'mishnah' | 'gemara' | 'rambam';
+}
 
 export default function LearningPage() {
   const { planId } = useParams<{ planId: string }>();
@@ -18,6 +24,8 @@ export default function LearningPage() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [showNextMasechet, setShowNextMasechet] = useState(false);
   const [completedMasechetId, setCompletedMasechetId] = useState<string | null>(null);
+  const [showDayComplete, setShowDayComplete] = useState(false);
+  const [continueInfo, setContinueInfo] = useState<ContinueInfo | null>(null);
 
   if (!plan) {
     return (
@@ -78,6 +86,26 @@ export default function LearningPage() {
     return null;
   };
 
+  const computeContinueInfo = (): ContinueInfo | null => {
+    const lastItem = items[items.length - 1];
+    const ct = plan.contentType || 'mishnah';
+    const masechet = getMasechet(lastItem.masechetId);
+    if (!masechet) return null;
+
+    const nextChapter = lastItem.chapter + 1;
+    if (nextChapter <= masechet.chapters.length) {
+      return { masechetId: lastItem.masechetId, chapter: nextChapter, contentType: ct };
+    }
+
+    // Finished this masechet - find the next one in the plan or just go to first chapter
+    const currentMasechetIdx = plan.masechetIds.indexOf(lastItem.masechetId);
+    if (currentMasechetIdx < plan.masechetIds.length - 1) {
+      return { masechetId: plan.masechetIds[currentMasechetIdx + 1], chapter: 1, contentType: ct };
+    }
+
+    return { masechetId: lastItem.masechetId, chapter: 1, contentType: ct };
+  };
+
   const handleComplete = () => {
     let totalCompleted = 0;
     if (plan.unit === 'perek') {
@@ -92,6 +120,10 @@ export default function LearningPage() {
     // Check if a masechet was completed
     const finishedMasechetId = checkMasechetCompletion(totalCompleted);
 
+    // Compute next chapter BEFORE updating state
+    const nextInfo = computeContinueInfo();
+    setContinueInfo(nextInfo);
+
     const today = new Date().toISOString().split('T')[0];
     markDayComplete(plan.id, today, totalCompleted);
 
@@ -103,13 +135,27 @@ export default function LearningPage() {
 
     // If a masechet was completed in a multi-masechet plan, show next-masechet picker
     if (finishedMasechetId && plan.masechetIds.length > 2) {
-      // Only show if there are 2+ remaining masechtot to choose from
       setCompletedMasechetId(finishedMasechetId);
       setShowNextMasechet(true);
       return;
     }
 
-    navigate(`/plan/${plan.id}`);
+    setShowDayComplete(true);
+  };
+
+  const handleContinueFreeLearning = () => {
+    if (!continueInfo) return;
+    const masechet = getMasechet(continueInfo.masechetId);
+    if (!masechet) return;
+    const seder = getSederForMasechet(continueInfo.masechetId);
+    navigate('/free', {
+      state: {
+        contentType: continueInfo.contentType,
+        sederId: seder?.id,
+        masechetId: continueInfo.masechetId,
+        chapter: continueInfo.chapter,
+      },
+    });
   };
 
   const handleNextMasechetChoice = (chosenMasechetId: string | null) => {
@@ -141,7 +187,7 @@ export default function LearningPage() {
       }
     }
     setShowNextMasechet(false);
-    navigate(`/plan/${plan.id}`);
+    setShowDayComplete(true);
   };
 
   const chapterRef = `${currentItem.sefariaName} ${currentItem.chapter}`;
@@ -161,6 +207,37 @@ export default function LearningPage() {
           completedMasechetId={completedMasechetId}
           onChoose={handleNextMasechetChoice}
         />
+      )}
+
+      {showDayComplete && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center space-y-5">
+            <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+              <Check className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-800">כל הכבוד!</h2>
+            <p className="text-gray-600">הלימוד היומי הושלם בהצלחה</p>
+
+            <div className="space-y-3 pt-2">
+              {continueInfo && (
+                <button
+                  onClick={handleContinueFreeLearning}
+                  className="w-full btn-primary flex items-center justify-center gap-2 py-3"
+                >
+                  <BookOpen className="w-5 h-5" />
+                  המשך לימוד חופשי
+                </button>
+              )}
+              <button
+                onClick={() => navigate(`/plan/${plan.id}`)}
+                className="w-full btn-secondary flex items-center justify-center gap-2 py-3"
+              >
+                <ArrowRight className="w-5 h-5" />
+                חזרה לתוכנית
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Navigation header */}

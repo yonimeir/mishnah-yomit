@@ -1,8 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, ChevronDown, ChevronUp, BookOpen, ScrollText, Scale } from 'lucide-react';
 import {
   type Masechet,
   type ContentType,
+  getMasechet,
+  getSederForMasechet,
   getStructureForType,
   getContentTypeLabels,
   getGemaraDafRef,
@@ -14,14 +17,44 @@ import MishnahTextDisplay from '../components/MishnahText';
 
 type View = 'types' | 'sedarim' | 'masechtot' | 'perakim' | 'learning';
 
+interface FreeLearningNavState {
+  contentType?: ContentType;
+  sederId?: string;
+  masechetId?: string;
+  chapter?: number;
+}
+
 export default function FreeLearningPage() {
-  const [view, setView] = useState<View>('types');
-  const [contentType, setContentType] = useState<ContentType>('mishnah');
-  const [selectedSederId, setSelectedSederId] = useState<string | null>(null);
-  const [selectedMasechet, setSelectedMasechet] = useState<Masechet | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number>(0);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const navState = location.state as FreeLearningNavState | null;
+
+  const [view, setView] = useState<View>(() => {
+    if (navState?.masechetId && navState?.chapter != null) return 'learning';
+    return 'types';
+  });
+  const [contentType, setContentType] = useState<ContentType>(() => navState?.contentType || 'mishnah');
+  const [selectedSederId, setSelectedSederId] = useState<string | null>(() => {
+    if (navState?.sederId) return navState.sederId;
+    if (navState?.masechetId) {
+      const seder = getSederForMasechet(navState.masechetId);
+      return seder?.id ?? null;
+    }
+    return null;
+  });
+  const [selectedMasechet, setSelectedMasechet] = useState<Masechet | null>(() => {
+    if (navState?.masechetId) return getMasechet(navState.masechetId) ?? null;
+    return null;
+  });
+  const [selectedChapter, setSelectedChapter] = useState<number>(() => navState?.chapter ?? 0);
   const [showPlanPicker, setShowPlanPicker] = useState(false);
   const [selectedPlanIds, setSelectedPlanIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (navState) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, []);
 
   const { plans, addPreLearnedChapters } = usePlanStore();
   const activePlans = plans.filter(p => !p.isCompleted);
