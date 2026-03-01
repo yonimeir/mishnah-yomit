@@ -2,9 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, ChevronDown, ChevronUp, BookOpen, ScrollText, Scale } from 'lucide-react';
 import {
-  MISHNAH_STRUCTURE,
-  getMasechet,
-  getSederForMasechet,
   type Masechet,
   type ContentType,
   getMasechet,
