@@ -250,17 +250,15 @@ export default function NewPlanPage() {
             <div className="flex gap-2 justify-center mb-4">
               <button
                 onClick={() => setUnit('mishnah')}
-                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                  unit === 'mishnah' ? 'bg-primary-700 text-white' : 'bg-parchment-200 text-primary-700'
-                }`}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${unit === 'mishnah' ? 'bg-primary-700 text-white' : 'bg-parchment-200 text-primary-700'
+                  }`}
               >
                 לפי {labels.unitPlural}
               </button>
               <button
                 onClick={() => setUnit('perek')}
-                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                  unit === 'perek' ? 'bg-primary-700 text-white' : 'bg-parchment-200 text-primary-700'
-                }`}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${unit === 'perek' ? 'bg-primary-700 text-white' : 'bg-parchment-200 text-primary-700'
+                  }`}
               >
                 לפי {labels.chapterPlural}
               </button>
@@ -357,9 +355,8 @@ export default function NewPlanPage() {
                       setSelectedSederId(seder.id);
                       setStep('settings');
                     }}
-                    className={`card w-full text-right hover:shadow-md transition-all ${
-                      selectedSederId === seder.id ? 'ring-2 ring-primary-500' : ''
-                    }`}
+                    className={`card w-full text-right hover:shadow-md transition-all ${selectedSederId === seder.id ? 'ring-2 ring-primary-500' : ''
+                      }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-400">
@@ -414,9 +411,8 @@ export default function NewPlanPage() {
                               toggleMasechet(m.id);
                             }
                           }}
-                          className={`card text-right py-3 px-4 hover:shadow-md transition-all ${
-                            isSelected ? 'ring-2 ring-primary-500 bg-primary-50' : ''
-                          }`}
+                          className={`card text-right py-3 px-4 hover:shadow-md transition-all ${isSelected ? 'ring-2 ring-primary-500 bg-primary-50' : ''
+                            }`}
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-primary-800">{m.name}</span>
@@ -427,7 +423,6 @@ export default function NewPlanPage() {
                           <span className="text-xs text-gray-500 block mt-1">
                             {m.chapters.length} {labels.chapterPlural}
                             {contentType === 'mishnah' && ` • ${getTotalMishnayot(m)} משניות`}
-                            {contentType === 'gemara' && ` ${labels.chapterPlural}`}
                           </span>
                         </button>
                       );
@@ -501,9 +496,8 @@ export default function NewPlanPage() {
                   <button
                     key={ft}
                     onClick={() => setFreqType(ft)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                      freqType === ft ? 'bg-primary-700 text-white' : 'bg-parchment-200 text-primary-700'
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${freqType === ft ? 'bg-primary-700 text-white' : 'bg-parchment-200 text-primary-700'
+                      }`}
                   >
                     {ft === 'days_per_week' ? 'ימים בשבוע' : ft === 'specific_days' ? 'ימים ספציפיים' : 'ימים בחודש'}
                   </button>
@@ -532,9 +526,8 @@ export default function NewPlanPage() {
                       onClick={() => setSpecificDays(prev =>
                         prev.includes(idx) ? prev.filter(d => d !== idx) : [...prev, idx].sort()
                       )}
-                      className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${
-                        specificDays.includes(idx) ? 'bg-primary-600 text-white' : 'bg-parchment-200 text-gray-600'
-                      }`}
+                      className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${specificDays.includes(idx) ? 'bg-primary-600 text-white' : 'bg-parchment-200 text-gray-600'
+                        }`}
                     >{name}</button>
                   ))}
                 </div>
@@ -624,16 +617,14 @@ export default function NewPlanPage() {
                     <div className="space-y-2">
                       <button
                         onClick={() => setDistributionStrategy('tapered')}
-                        className={`w-full rounded-xl p-3 text-right transition-all border-2 ${
-                          distributionStrategy === 'tapered'
+                        className={`w-full rounded-xl p-3 text-right transition-all border-2 ${distributionStrategy === 'tapered'
                             ? 'border-primary-500 bg-primary-50'
                             : 'border-parchment-200 bg-white hover:border-parchment-300'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                            distributionStrategy === 'tapered' ? 'border-primary-500' : 'border-gray-300'
-                          }`}>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${distributionStrategy === 'tapered' ? 'border-primary-500' : 'border-gray-300'
+                            }`}>
                             {distributionStrategy === 'tapered' && <div className="w-3 h-3 rounded-full bg-primary-500" />}
                           </div>
                           <div className="flex-1">
@@ -648,16 +639,14 @@ export default function NewPlanPage() {
 
                       <button
                         onClick={() => setDistributionStrategy('even')}
-                        className={`w-full rounded-xl p-3 text-right transition-all border-2 ${
-                          distributionStrategy === 'even'
+                        className={`w-full rounded-xl p-3 text-right transition-all border-2 ${distributionStrategy === 'even'
                             ? 'border-primary-500 bg-primary-50'
                             : 'border-parchment-200 bg-white hover:border-parchment-300'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                            distributionStrategy === 'even' ? 'border-primary-500' : 'border-gray-300'
-                          }`}>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${distributionStrategy === 'even' ? 'border-primary-500' : 'border-gray-300'
+                            }`}>
                             {distributionStrategy === 'even' && <div className="w-3 h-3 rounded-full bg-primary-500" />}
                           </div>
                           <div className="flex-1">
