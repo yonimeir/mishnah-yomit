@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { fetchChapter, fetchCommentary, type MishnahText as MishnahTextType, getCommentatorsForType } from '../services/sefaria';
 import { gematriya } from '../services/scheduler';
 import { Loader2, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
-import type { ContentType } from '../data/mishnah-structure';
+import { type ContentType, getGemaraAmudRef, dafToDisplay } from '../data/mishnah-structure';
+import { getMasechet } from '../data/mishnah-structure';
 
 interface MishnahTextProps {
   sefariaRef: string;
@@ -39,9 +40,21 @@ export default function MishnahTextDisplay({
   const [commentaries, setCommentaries] = useState<MishnahCommentaries>({});
   const [loadingCommentary, setLoadingCommentary] = useState<Record<string, boolean>>({});
 
-  const chapterRef = sefariaRef.includes(':')
+  let chapterRef = sefariaRef.includes(':')
     ? sefariaRef.split(':')[0]
     : sefariaRef;
+
+  // Handle Gemara-specific references
+  const masechet = getMasechet(sefariaRef.split(' ')[0]) || getMasechet(`g_${sefariaRef.split(' ').map(s => s.toLowerCase()).join('_')}`);
+
+  if (contentType === 'gemara' && masechet) {
+    // Sefaria refs for Gemara passed in are usually just 'Masechet N' (where N is the 1-based index)
+    // We need to convert it to the actual Daf ref like 'Masechet 2a'
+    // Chapter is 1-based, index is 0-based
+    const index = chapter - 1;
+    // By default, just fetch the first amud of the daf
+    chapterRef = getGemaraAmudRef(masechet, index, 0);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -136,7 +149,10 @@ export default function MishnahTextDisplay({
     );
   }
 
-  const mishnayot = text.hebrew.slice(fromMishnah - 1, toMishnah);
+  // For Gemara, fromMishnah is the amud index (1 for a, 2 for b), so we just want the whole text array (all paragraphs)
+  const mishnayot = contentType === 'gemara'
+    ? text.hebrew
+    : text.hebrew.slice(fromMishnah - 1, toMishnah);
 
   return (
     <div className="space-y-4">
@@ -144,18 +160,25 @@ export default function MishnahTextDisplay({
       <div className="text-center mb-4">
         <h2 className="text-xl font-bold text-primary-800 font-serif-hebrew">
           {contentType === 'rambam' ? 'הלכות' : contentType === 'gemara' ? 'מסכת' : 'מסכת'} {masechetName}{' '}
-          {contentType === 'gemara' ? `דף ${chapter + 1}` : `פרק ${gematriya(chapter)}`}
+          {contentType === 'gemara' ? `דף ${masechet ? dafToDisplay(masechet, chapter - 1) : chapter + 1}` : `פרק ${gematriya(chapter)}`}
         </h2>
         {contentType !== 'gemara' && fromMishnah !== toMishnah && (
           <p className="text-sm text-gray-500 mt-1">
             {contentType === 'rambam' ? 'הלכות' : 'משניות'} {gematriya(fromMishnah)} - {gematriya(toMishnah)}
           </p>
         )}
+        {contentType === 'gemara' && (
+          <p className="text-sm text-gray-500 mt-1">
+            עמוד {gematriya(fromMishnah)}
+          </p>
+        )}
       </div>
 
-      {/* Mishnayot with clickable commentary */}
+      {/* Mishnayot / Paragraphs with clickable commentary */}
       {mishnayot.map((mishnahHtml, idx) => {
-        const mishnahNum = fromMishnah + idx;       // 1-based
+        // For gemara, paragraphs don't have letters/numbers shown natively, usually. 
+        // We'll show a small generic paragraph market or nothing.
+        const mishnahNum = contentType === 'gemara' ? idx + 1 : fromMishnah + idx;       // 1-based
         const mishnahIdx = mishnahNum - 1;           // 0-based for Sefaria
         const activeCommentator = openCommentary[mishnahIdx];
 
@@ -163,9 +186,11 @@ export default function MishnahTextDisplay({
           <div key={idx} className="card overflow-hidden">
             {/* Mishnah text */}
             <div className="flex items-start gap-3 mb-3">
-              <span className="bg-primary-100 text-primary-700 rounded-lg px-2 py-1 text-sm font-bold shrink-0">
-                {gematriya(mishnahNum)}
-              </span>
+              {contentType !== 'gemara' && (
+                <span className="bg-primary-100 text-primary-700 rounded-lg px-2 py-1 text-sm font-bold shrink-0">
+                  {gematriya(mishnahNum)}
+                </span>
+              )}
               <div
                 className="font-serif-hebrew text-lg leading-relaxed text-gray-800"
                 dangerouslySetInnerHTML={{ __html: stripHtmlTags(mishnahHtml) }}
