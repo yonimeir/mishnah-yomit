@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BookOpen, Trash2, RotateCcw, Play, CheckCheck, AlertTriangle, Settings } from 'lucide-react';
 import { usePlanStore, getSkippedUnitsCount, getPreLearnedUnitsCount } from '../store/usePlanStore';
-import { globalToLocal, indexToRef, getUnitLabel, getContentTypeLabels } from '../data/mishnah-structure';
+import { globalToLocal, indexToRef, getUnitLabel, getContentTypeLabels, dafToDisplay, getMasechet } from '../data/mishnah-structure';
 import { gematriya, getLearningItemsForDay, getAmountForPosition } from '../services/scheduler';
 import ProgressTable from '../components/ProgressTable';
 import AlreadyLearnedModal from '../components/AlreadyLearnedModal';
@@ -79,9 +79,8 @@ export default function PlanDetailPage() {
         {/* Progress bar */}
         <div className="w-full bg-parchment-200 rounded-full h-4 mb-2 relative overflow-hidden">
           <div
-            className={`absolute inset-y-0 right-0 rounded-full transition-all duration-500 ${
-              plan.isCompleted ? 'bg-gold-500' : 'bg-primary-500'
-            }`}
+            className={`absolute inset-y-0 right-0 rounded-full transition-all duration-500 ${plan.isCompleted ? 'bg-gold-500' : 'bg-primary-500'
+              }`}
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -165,12 +164,15 @@ export default function PlanDetailPage() {
           <p className="text-sm text-primary-600 mb-1">המיקום הנוכחי שלך:</p>
           <p className="font-bold text-primary-800">
             {plan.masechetIds.length > 1 && `מסכת ${currentLoc.masechet.name} • `}
-            {plan.unit === 'mishnah'
-              ? (() => {
+            {plan.contentType === 'gemara'
+              ? `דף ${dafToDisplay(currentLoc.masechet, currentLoc.positionInMasechet)}`
+              : (plan.unit === 'mishnah'
+                ? (() => {
                   const ref = indexToRef(currentLoc.masechet, currentLoc.positionInMasechet);
                   return `פרק ${gematriya(ref.chapter)} משנה ${gematriya(ref.mishnah)}`;
                 })()
-              : `פרק ${gematriya(currentLoc.positionInMasechet + 1)}`
+                : `פרק ${gematriya(currentLoc.positionInMasechet + 1)}`
+              )
             }
           </p>
         </div>
@@ -188,10 +190,19 @@ export default function PlanDetailPage() {
                 </span>
                 <span className="font-bold text-primary-800">
                   {plan.masechetIds.length > 1 && <span className="text-xs text-gray-500 ml-2">{item.masechetName}</span>}
-                  פרק {gematriya(item.chapter)}{' '}
-                  {item.fromMishnah === item.toMishnah
-                    ? `משנה ${gematriya(item.fromMishnah)}`
-                    : `משניות ${gematriya(item.fromMishnah)}-${gematriya(item.toMishnah)}`}
+                  {plan.contentType === 'gemara' ? (
+                    <>
+                      דף {getMasechet(item.masechetId) ? dafToDisplay(getMasechet(item.masechetId)!, item.chapter - 1) : item.chapter + 1}
+                      {item.fromMishnah === 1 ? ' ע"א' : item.fromMishnah === 2 ? ' ע"ב' : ''}
+                    </>
+                  ) : (
+                    <>
+                      פרק {gematriya(item.chapter)}{' '}
+                      {item.fromMishnah === item.toMishnah
+                        ? `משנה ${gematriya(item.fromMishnah)}`
+                        : `משניות ${gematriya(item.fromMishnah)}-${gematriya(item.toMishnah)}`}
+                    </>
+                  )}
                 </span>
               </div>
             ))}
