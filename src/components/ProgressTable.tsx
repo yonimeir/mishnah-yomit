@@ -3,6 +3,7 @@ import {
   getMasechetUnits,
   MISHNAH_STRUCTURE,
   type Masechet,
+  formatGemaraPoint,
 } from '../data/mishnah-structure';
 import { gematriya } from '../services/scheduler';
 import {
@@ -270,17 +271,19 @@ function PerekGrid({
             }}
             disabled={!isCompleted && !isPreLearned}
             className={`rounded-xl p-2 text-center text-sm font-bold transition-all ${isSkipped
-                ? 'bg-amber-400 text-white ring-2 ring-amber-300 ring-offset-1'
-                : isPreLearned
-                  ? 'bg-success/80 text-white ring-1 ring-green-300'
-                  : isCompleted
-                    ? 'bg-success text-white hover:bg-green-600 cursor-pointer'
-                    : isCurrent
-                      ? 'bg-primary-500 text-white ring-2 ring-primary-300 ring-offset-2'
-                      : 'bg-parchment-200 text-gray-600'
+              ? 'bg-amber-400 text-white ring-2 ring-amber-300 ring-offset-1'
+              : isPreLearned
+                ? 'bg-success/80 text-white ring-1 ring-green-300'
+                : isCompleted
+                  ? 'bg-success text-white hover:bg-green-600 cursor-pointer'
+                  : isCurrent
+                    ? 'bg-primary-500 text-white ring-2 ring-primary-300 ring-offset-2'
+                    : 'bg-parchment-200 text-gray-600'
               }`}
           >
-            {gematriya(idx + 1)}
+            {plan.contentType === 'gemara'
+              ? formatGemaraPoint(masechet, idx).replace('דף ', '')
+              : gematriya(idx + 1)}
           </button>
         );
       })}
@@ -314,8 +317,8 @@ function SmartMishnahGrid({
               key={chIdx}
               onClick={() => toggleSkippedChapter(plan.id, masechet.id, chIdx + 1)}
               className={`flex items-center gap-2 py-1.5 px-3 rounded-xl w-full text-right transition-all ${isSkipped
-                  ? 'bg-amber-100 hover:bg-amber-200 border border-amber-300'
-                  : 'bg-green-50 hover:bg-green-100'
+                ? 'bg-amber-100 hover:bg-amber-200 border border-amber-300'
+                : 'bg-green-50 hover:bg-green-100'
                 }`}
             >
               {isSkipped ? (
@@ -366,10 +369,10 @@ function SmartMishnahGrid({
             <div
               key={m}
               className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${isCompleted
-                  ? 'bg-success text-white'
-                  : isCurrent
-                    ? 'bg-primary-500 text-white ring-2 ring-primary-300 ring-offset-1 scale-110'
-                    : 'bg-parchment-200 text-gray-500'
+                ? 'bg-success text-white'
+                : isCurrent
+                  ? 'bg-primary-500 text-white ring-2 ring-primary-300 ring-offset-1 scale-110'
+                  : 'bg-parchment-200 text-gray-500'
                 }`}
             >
               {gematriya(m + 1)}
