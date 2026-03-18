@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { startNotificationCheck } from './services/notifications';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -17,3 +18,6 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+// Start watching for scheduled reminders
+startNotificationCheck();

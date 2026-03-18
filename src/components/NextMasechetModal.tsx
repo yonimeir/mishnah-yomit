@@ -5,27 +5,30 @@ import type { LearningPlan } from '../store/usePlanStore';
 
 interface NextMasechetModalProps {
   plan: LearningPlan;
+  subProgramId: string;
   completedMasechetId: string;
   /** Called with the chosen next masechet ID (or null to keep default order) */
   onChoose: (nextMasechetId: string | null) => void;
 }
 
-export default function NextMasechetModal({ plan, completedMasechetId, onChoose }: NextMasechetModalProps) {
+export default function NextMasechetModal({ plan, subProgramId, completedMasechetId, onChoose }: NextMasechetModalProps) {
   const completedMasechet = getMasechet(completedMasechetId);
+  const subProgram = plan.subPrograms.find(sp => sp.id === subProgramId);
 
   // Get remaining (not yet started) masechtot
   const remainingMasechtot = useMemo(() => {
+    if (!subProgram) return [];
     // Figure out which masechtot haven't been completed yet
     let offset = 0;
     const remaining: Array<{ id: string; name: string; units: number; isNext: boolean }> = [];
 
-    for (const mid of plan.masechetIds) {
+    for (const mid of subProgram.masechetIds) {
       const m = getMasechet(mid);
       if (!m) continue;
-      const units = getMasechetUnits(m, plan.unit);
+      const units = getMasechetUnits(m, subProgram.unit);
       const masechetEnd = offset + units;
 
-      if (plan.currentPosition < masechetEnd && mid !== completedMasechetId) {
+      if (subProgram.currentPosition < masechetEnd && mid !== completedMasechetId) {
         remaining.push({
           id: mid,
           name: m.name,
@@ -36,7 +39,9 @@ export default function NextMasechetModal({ plan, completedMasechetId, onChoose 
       offset += units;
     }
     return remaining;
-  }, [plan, completedMasechetId]);
+  }, [subProgram, completedMasechetId]);
+
+  if (!subProgram) return null;
 
   const defaultNext = remainingMasechtot.find(m => m.isNext);
 
@@ -80,7 +85,7 @@ export default function NextMasechetModal({ plan, completedMasechetId, onChoose 
                     <h3 className="font-bold text-primary-800">מסכת {defaultNext.name}</h3>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    {defaultNext.units} {plan.unit === 'mishnah' ? 'משניות' : 'פרקים'}
+                    {defaultNext.units} {subProgram.unit === 'mishnah' ? 'משניות' : 'פרקים'}
                   </p>
                 </div>
               </div>
@@ -104,7 +109,7 @@ export default function NextMasechetModal({ plan, completedMasechetId, onChoose 
                     <div className="flex-1">
                       <h3 className="font-bold text-primary-800 text-sm">מסכת {m.name}</h3>
                       <p className="text-xs text-gray-500">
-                        {m.units} {plan.unit === 'mishnah' ? 'משניות' : 'פרקים'}
+                        {m.units} {subProgram.unit === 'mishnah' ? 'משניות' : 'פרקים'}
                       </p>
                     </div>
                   </div>

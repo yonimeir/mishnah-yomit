@@ -14,12 +14,14 @@ import {
   getPreLearnedInMasechet,
   getSkippedUnitsCount,
   getPreLearnedUnitsCount,
+  type SubProgram,
   type LearningPlan,
 } from '../store/usePlanStore';
 import { Check, Minus, AlertTriangle } from 'lucide-react';
 
 interface ProgressTableProps {
   plan: LearningPlan;
+  subProgram: SubProgram;
 }
 
 type MasechetStatus = 'completed' | 'in_progress' | 'not_started';
@@ -35,21 +37,21 @@ interface MasechetInfo {
   preLearnedCount: number;
 }
 
-export default function ProgressTable({ plan }: ProgressTableProps) {
-  const totalHoles = getSkippedUnitsCount(plan);
-  const totalPreLearned = getPreLearnedUnitsCount(plan);
+export default function ProgressTable({ plan, subProgram }: ProgressTableProps) {
+  const totalHoles = getSkippedUnitsCount(subProgram);
+  const totalPreLearned = getPreLearnedUnitsCount(subProgram);
 
-  const masechtotInfo: MasechetInfo[] = plan.masechetIds.reduce<{ info: MasechetInfo[], offset: number }>((acc, id) => {
+  const masechtotInfo: MasechetInfo[] = subProgram.masechetIds.reduce<{ info: MasechetInfo[], offset: number }>((acc, id) => {
     const m = getMasechet(id);
     if (!m) return acc;
-    const units = getMasechetUnits(m, plan.unit);
+    const units = getMasechetUnits(m, subProgram.unit);
     const offset = acc.offset;
 
     const masechetEnd = offset + units;
-    const posInMasechet = Math.max(0, Math.min(plan.currentPosition - offset, units));
+    const posInMasechet = Math.max(0, Math.min(subProgram.currentPosition - offset, units));
     const status: MasechetStatus =
-      plan.currentPosition >= masechetEnd ? 'completed'
-        : plan.currentPosition > offset ? 'in_progress'
+      subProgram.currentPosition >= masechetEnd ? 'completed'
+        : subProgram.currentPosition > offset ? 'in_progress'
           : 'not_started';
 
     acc.info.push({
@@ -59,14 +61,14 @@ export default function ProgressTable({ plan }: ProgressTableProps) {
       status,
       posInMasechet,
       progress: Math.round((posInMasechet / units) * 100),
-      skippedCount: getSkippedInMasechet(plan, id),
-      preLearnedCount: getPreLearnedInMasechet(plan, id),
+      skippedCount: getSkippedInMasechet(subProgram, id),
+      preLearnedCount: getPreLearnedInMasechet(subProgram, id),
     });
     acc.offset += units;
     return acc;
   }, { info: [], offset: 0 }).info;
 
-  const isMulti = plan.masechetIds.length > 1;
+  const isMulti = subProgram.masechetIds.length > 1;
 
   return (
     <div className="space-y-4">
@@ -75,23 +77,23 @@ export default function ProgressTable({ plan }: ProgressTableProps) {
           {totalHoles > 0 && (
             <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 flex items-center gap-1">
               <AlertTriangle className="w-3 h-3" />
-              {totalHoles} {plan.unit === 'mishnah' ? 'משניות' : 'פרקים'} להשלמה
+              {totalHoles} {subProgram.unit === 'mishnah' ? 'משניות' : 'פרקים'} להשלמה
             </span>
           )}
           {totalPreLearned > 0 && (
             <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
               <Check className="w-3 h-3" />
-              {totalPreLearned} {plan.unit === 'mishnah' ? 'משניות' : 'פרקים'} נלמדו מראש
+              {totalPreLearned} {subProgram.unit === 'mishnah' ? 'משניות' : 'פרקים'} נלמדו מראש
             </span>
           )}
         </div>
-        <h3 className="font-bold text-primary-800 text-lg">התקדמות</h3>
+        <h3 className="font-bold text-primary-800 text-lg">התקדמות - {subProgram.name || 'תוכנית עיקרית'}</h3>
       </div>
 
-      {!isMulti ? (
-        <MasechetDetail info={masechtotInfo[0]} plan={plan} />
+      {!isMulti && masechtotInfo.length > 0 ? (
+        <MasechetDetail info={masechtotInfo[0]} plan={plan} subProgram={subProgram} />
       ) : (
-        <MultiMasechetProgress masechtotInfo={masechtotInfo} plan={plan} />
+        <MultiMasechetProgress masechtotInfo={masechtotInfo} plan={plan} subProgram={subProgram} />
       )}
     </div>
   );
@@ -99,7 +101,7 @@ export default function ProgressTable({ plan }: ProgressTableProps) {
 
 // ── Multi-masechet view ──
 
-function MultiMasechetProgress({ masechtotInfo, plan }: { masechtotInfo: MasechetInfo[]; plan: LearningPlan }) {
+function MultiMasechetProgress({ masechtotInfo, plan, subProgram }: { masechtotInfo: MasechetInfo[]; plan: LearningPlan; subProgram: SubProgram }) {
   const groups: Array<
     | { type: 'single'; info: MasechetInfo }
     | { type: 'seder_group'; sederName: string; masechtot: MasechetInfo[]; totalUnits: number }
@@ -141,7 +143,7 @@ function MultiMasechetProgress({ masechtotInfo, plan }: { masechtotInfo: Maseche
             <div key={idx} className="card py-3 px-4 bg-parchment-50 opacity-60">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-400">
-                  {group.masechtot.length} מסכתות • {group.totalUnits} {plan.unit === 'mishnah' ? 'משניות' : 'פרקים'}
+                  {group.masechtot.length} מסכתות • {group.totalUnits} {subProgram.unit === 'mishnah' ? 'משניות' : 'פרקים'}
                 </span>
                 <div className="flex items-center gap-2">
                   <Minus className="w-4 h-4 text-gray-300" />
@@ -189,7 +191,7 @@ function MultiMasechetProgress({ masechtotInfo, plan }: { masechtotInfo: Maseche
                   </span>
                   <span className="font-bold text-gray-600">מסכת {info.masechet.name}</span>
                 </div>
-                <MasechetDetail info={info} plan={plan} />
+                <MasechetDetail info={info} plan={plan} subProgram={subProgram} />
               </div>
             );
           }
@@ -197,7 +199,7 @@ function MultiMasechetProgress({ masechtotInfo, plan }: { masechtotInfo: Maseche
             <div key={idx} className="card py-3 px-4 bg-parchment-50 opacity-60">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-400">
-                  {info.units} {plan.unit === 'mishnah' ? 'משניות' : 'פרקים'}
+                  {info.units} {subProgram.unit === 'mishnah' ? 'משניות' : 'פרקים'}
                 </span>
                 <div className="flex items-center gap-2">
                   <Minus className="w-4 h-4 text-gray-300" />
@@ -225,7 +227,7 @@ function MultiMasechetProgress({ masechtotInfo, plan }: { masechtotInfo: Maseche
             <div className="w-full bg-parchment-200 rounded-full h-2 mb-1">
               <div className="h-2 rounded-full bg-primary-400 transition-all" style={{ width: `${info.progress}%` }} />
             </div>
-            <MasechetDetail info={info} plan={plan} />
+            <MasechetDetail info={info} plan={plan} subProgram={subProgram} />
           </div>
         );
       })}
@@ -235,22 +237,22 @@ function MultiMasechetProgress({ masechtotInfo, plan }: { masechtotInfo: Maseche
 
 // ── Single masechet detail ──
 
-function MasechetDetail({ info, plan }: { info: MasechetInfo; plan: LearningPlan }) {
+function MasechetDetail({ info, plan, subProgram }: { info: MasechetInfo; plan: LearningPlan; subProgram: SubProgram }) {
   if (!info) return null;
   const { masechet, offset, posInMasechet } = info;
 
-  if (plan.unit === 'perek') {
-    return <PerekGrid masechet={masechet} offset={offset} currentPosition={offset + posInMasechet} plan={plan} />;
+  if (subProgram.unit === 'perek') {
+    return <PerekGrid masechet={masechet} offset={offset} currentPosition={offset + posInMasechet} plan={plan} subProgram={subProgram} />;
   }
-  return <SmartMishnahGrid masechet={masechet} offset={offset} currentPosition={offset + posInMasechet} plan={plan} />;
+  return <SmartMishnahGrid masechet={masechet} offset={offset} currentPosition={offset + posInMasechet} plan={plan} subProgram={subProgram} />;
 }
 
 // ── Perek mode grid ──
 
 function PerekGrid({
-  masechet, offset, currentPosition, plan,
+  masechet, offset, currentPosition, plan, subProgram
 }: {
-  masechet: Masechet; offset: number; currentPosition: number; plan: LearningPlan;
+  masechet: Masechet; offset: number; currentPosition: number; plan: LearningPlan; subProgram: SubProgram
 }) {
   const { toggleSkippedChapter } = usePlanStore();
 
@@ -260,14 +262,14 @@ function PerekGrid({
         const globalIdx = offset + idx;
         const isCompleted = globalIdx < currentPosition;
         const isCurrent = globalIdx === currentPosition;
-        const isSkipped = isCompleted && isChapterSkipped(plan, masechet.id, idx + 1);
-        const isPreLearned = !isCompleted && isChapterPreLearned(plan, masechet.id, idx + 1);
+        const isSkipped = isCompleted && isChapterSkipped(subProgram, masechet.id, idx + 1);
+        const isPreLearned = !isCompleted && isChapterPreLearned(subProgram, masechet.id, idx + 1);
 
         return (
           <button
             key={idx}
             onClick={() => {
-              if (isCompleted) toggleSkippedChapter(plan.id, masechet.id, idx + 1);
+              if (isCompleted) toggleSkippedChapter(plan.id, subProgram.id, masechet.id, idx + 1);
             }}
             disabled={!isCompleted && !isPreLearned}
             className={`rounded-xl p-2 text-center text-sm font-bold transition-all ${isSkipped
@@ -281,7 +283,7 @@ function PerekGrid({
                     : 'bg-parchment-200 text-gray-600'
               }`}
           >
-            {plan.contentType === 'gemara'
+            {subProgram.contentType === 'gemara'
               ? formatGemaraPoint(masechet, idx).replace('דף ', '')
               : gematriya(idx + 1)}
           </button>
@@ -294,9 +296,9 @@ function PerekGrid({
 // ── Smart mishnah grid ──
 
 function SmartMishnahGrid({
-  masechet, offset, currentPosition, plan,
+  masechet, offset, currentPosition, plan, subProgram
 }: {
-  masechet: Masechet; offset: number; currentPosition: number; plan: LearningPlan;
+  masechet: Masechet; offset: number; currentPosition: number; plan: LearningPlan; subProgram: SubProgram
 }) {
   const { toggleSkippedChapter } = usePlanStore();
   return (
@@ -307,15 +309,15 @@ function SmartMishnahGrid({
         const chapterEndGlobal = chapterStartGlobal + count;
         const chapterCompleted = currentPosition >= chapterEndGlobal;
         const chapterNotStarted = currentPosition <= chapterStartGlobal;
-        const isSkipped = chapterCompleted && isChapterSkipped(plan, masechet.id, chIdx + 1);
-        const isPreLearned = !chapterCompleted && isChapterPreLearned(plan, masechet.id, chIdx + 1);
+        const isSkipped = chapterCompleted && isChapterSkipped(subProgram, masechet.id, chIdx + 1);
+        const isPreLearned = !chapterCompleted && isChapterPreLearned(subProgram, masechet.id, chIdx + 1);
 
         // ── Completed chapter (tappable to toggle hole) ──
         if (chapterCompleted) {
           return (
             <button
               key={chIdx}
-              onClick={() => toggleSkippedChapter(plan.id, masechet.id, chIdx + 1)}
+              onClick={() => toggleSkippedChapter(plan.id, subProgram.id, masechet.id, chIdx + 1)}
               className={`flex items-center gap-2 py-1.5 px-3 rounded-xl w-full text-right transition-all ${isSkipped
                 ? 'bg-amber-100 hover:bg-amber-200 border border-amber-300'
                 : 'bg-green-50 hover:bg-green-100'

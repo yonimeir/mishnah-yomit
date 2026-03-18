@@ -14,7 +14,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/new-plan" element={<NewPlanPage />} />
           <Route path="/plan/:planId" element={<PlanDetailPage />} />
-          <Route path="/learn/:planId" element={<LearningPage />} />
+          <Route path="/learn/:planId/:subProgramId?" element={<LearningPage />} />
           <Route path="/free" element={<FreeLearningPage />} />
         </Route>
       </Routes>

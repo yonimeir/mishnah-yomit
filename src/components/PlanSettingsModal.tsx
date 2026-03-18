@@ -1,23 +1,25 @@
 import { useState, useMemo } from 'react';
-import { X, Plus, Minus, ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
+import { X, Plus, Minus, ChevronUp, ChevronDown, Trash2, Bell } from 'lucide-react';
+import { requestNotificationPermission } from '../services/notifications';
 import {
   MISHNAH_STRUCTURE,
   getMasechet,
   getTotalMishnayot,
 } from '../data/mishnah-structure';
 import type { DistributionInfo } from '../services/scheduler';
-import { usePlanStore, type LearningPlan } from '../store/usePlanStore';
+import { usePlanStore, type LearningPlan, type SubProgram } from '../store/usePlanStore';
 
 interface PlanSettingsModalProps {
   plan: LearningPlan;
+  subProgram: SubProgram;
   onClose: () => void;
 }
 
-type SettingsTab = 'pace' | 'masechtot';
+type SettingsTab = 'pace' | 'masechtot' | 'reminder';
 
-export default function PlanSettingsModal({ plan, onClose }: PlanSettingsModalProps) {
+export default function PlanSettingsModal({ plan, subProgram, onClose }: PlanSettingsModalProps) {
   const [tab, setTab] = useState<SettingsTab>('pace');
-  const { updatePace, addMasechtot, reorderMasechtot } = usePlanStore();
+  const { updatePace, addMasechtot, reorderMasechtot, updateReminderTime } = usePlanStore();
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
@@ -34,31 +36,45 @@ export default function PlanSettingsModal({ plan, onClose }: PlanSettingsModalPr
         <div className="flex border-b border-parchment-200">
           <button
             onClick={() => setTab('pace')}
-            className={`flex-1 py-3 text-sm font-bold text-center transition-colors ${
-              tab === 'pace' ? 'text-primary-700 border-b-2 border-primary-500' : 'text-gray-500'
-            }`}
+            className={`flex-1 py-3 text-sm font-bold text-center transition-colors ${tab === 'pace' ? 'text-primary-700 border-b-2 border-primary-500' : 'text-gray-500'
+              }`}
           >
             קצב לימוד
           </button>
           <button
             onClick={() => setTab('masechtot')}
-            className={`flex-1 py-3 text-sm font-bold text-center transition-colors ${
-              tab === 'masechtot' ? 'text-primary-700 border-b-2 border-primary-500' : 'text-gray-500'
-            }`}
+            className={`flex-1 py-3 text-sm font-bold text-center transition-colors ${tab === 'masechtot' ? 'text-primary-700 border-b-2 border-primary-500' : 'text-gray-500'
+              }`}
           >
             מסכתות וסדר
+          </button>
+          <button
+            onClick={() => setTab('reminder')}
+            className={`flex-1 py-3 text-sm font-bold text-center transition-colors ${tab === 'reminder' ? 'text-primary-700 border-b-2 border-primary-500' : 'text-gray-500'
+              }`}
+          >
+            תזכורת
           </button>
         </div>
 
         <div className="overflow-y-auto flex-1 p-4">
           {tab === 'pace' && (
-            <PaceSettings plan={plan} updatePace={updatePace} onClose={onClose} />
+            <PaceSettings plan={plan} subProgram={subProgram} updatePace={updatePace} onClose={onClose} />
           )}
           {tab === 'masechtot' && (
             <MasechtotSettings
               plan={plan}
+              subProgram={subProgram}
               addMasechtot={addMasechtot}
               reorderMasechtot={reorderMasechtot}
+            />
+          )}
+          {tab === 'reminder' && (
+            <ReminderSettings
+              plan={plan}
+              subProgram={subProgram}
+              updateReminderTime={updateReminderTime}
+              onClose={onClose}
             />
           )}
         </div>
@@ -71,28 +87,30 @@ export default function PlanSettingsModal({ plan, onClose }: PlanSettingsModalPr
 
 function PaceSettings({
   plan,
+  subProgram,
   updatePace,
   onClose,
 }: {
   plan: LearningPlan;
-  updatePace: (planId: string, amount: number, dist?: DistributionInfo & { strategy: 'even' | 'tapered' }) => void;
+  subProgram: SubProgram;
+  updatePace: (planId: string, subProgramId: string, amount: number, dist?: DistributionInfo & { strategy: 'even' | 'tapered' }) => void;
   onClose: () => void;
 }) {
-  const [newAmount, setNewAmount] = useState(plan.calculatedAmountPerDay);
+  const [newAmount, setNewAmount] = useState(subProgram.calculatedAmountPerDay);
 
-  const unitLabel = plan.unit === 'mishnah' ? 'משניות' : 'פרקים';
-  const remaining = plan.totalUnits - plan.currentPosition;
+  const unitLabel = subProgram.unit === 'mishnah' ? 'משניות' : 'פרקים';
+  const remaining = subProgram.totalUnits - subProgram.currentPosition;
 
   const newEstimate = useMemo(() => {
     if (remaining <= 0) return null;
     return Math.ceil(remaining / newAmount);
   }, [newAmount, remaining]);
 
-  const hasChanged = newAmount !== plan.calculatedAmountPerDay;
+  const hasChanged = newAmount !== subProgram.calculatedAmountPerDay;
 
   const handleSave = () => {
     // Clear distribution when manually changing pace
-    updatePace(plan.id, newAmount, undefined);
+    updatePace(plan.id, subProgram.id, newAmount, undefined);
     onClose();
   };
 
@@ -127,7 +145,7 @@ function PaceSettings({
         {hasChanged && (
           <div className="mt-4 text-center space-y-1">
             <p className="text-sm text-gray-500">
-              כמות נוכחית: <span className="line-through">{plan.calculatedAmountPerDay}</span> → <span className="font-bold text-primary-700">{newAmount}</span> {unitLabel}
+              כמות נוכחית: <span className="line-through">{subProgram.calculatedAmountPerDay}</span> → <span className="font-bold text-primary-700">{newAmount}</span> {unitLabel}
             </p>
             {newEstimate && (
               <p className="text-xs text-gray-400">
@@ -142,15 +160,14 @@ function PaceSettings({
       <div>
         <label className="block text-sm font-bold text-primary-700 mb-2 text-center">קצב מהיר</label>
         <div className="flex gap-2 justify-center flex-wrap">
-          {[1, 2, 3, 5, 7, 10].filter(n => n !== plan.calculatedAmountPerDay).map(n => (
+          {[1, 2, 3, 5, 7, 10].filter(n => n !== subProgram.calculatedAmountPerDay).map(n => (
             <button
               key={n}
               onClick={() => setNewAmount(n)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                newAmount === n
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-parchment-200 text-gray-600 hover:bg-parchment-300'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${newAmount === n
+                ? 'bg-primary-600 text-white'
+                : 'bg-parchment-200 text-gray-600 hover:bg-parchment-300'
+                }`}
             >
               {n} {unitLabel}
             </button>
@@ -173,16 +190,18 @@ function PaceSettings({
 
 function MasechtotSettings({
   plan,
+  subProgram,
   addMasechtot,
   reorderMasechtot,
 }: {
   plan: LearningPlan;
-  addMasechtot: (planId: string, ids: string[], insertAt?: number) => void;
-  reorderMasechtot: (planId: string, newOrder: string[]) => void;
+  subProgram: SubProgram;
+  addMasechtot: (planId: string, subProgramId: string, ids: string[], insertAt?: number) => void;
+  reorderMasechtot: (planId: string, subProgramId: string, newOrder: string[]) => void;
 }) {
   const [showAddPicker, setShowAddPicker] = useState(false);
   const [selectedToAdd, setSelectedToAdd] = useState<string[]>([]);
-  const [order, setOrder] = useState(plan.masechetIds);
+  const [order, setOrder] = useState(subProgram.masechetIds);
   const [hasReordered, setHasReordered] = useState(false);
 
   // Masechtot already completed (their global offset + units <= currentPosition)
@@ -192,16 +211,16 @@ function MasechtotSettings({
     for (const id of order) {
       const m = getMasechet(id);
       if (!m) continue;
-      const units = plan.unit === 'mishnah'
+      const units = subProgram.unit === 'mishnah'
         ? m.chapters.reduce((s, c) => s + c, 0)
         : m.chapters.length;
-      if (plan.currentPosition >= offset + units) {
+      if (subProgram.currentPosition >= offset + units) {
         completed.add(id);
       }
       offset += units;
     }
     return completed;
-  }, [order, plan.currentPosition, plan.unit]);
+  }, [order, subProgram.currentPosition, subProgram.unit]);
 
   const moveUp = (idx: number) => {
     if (idx <= 0) return;
@@ -239,14 +258,14 @@ function MasechtotSettings({
 
   const handleAddSelected = () => {
     if (selectedToAdd.length === 0) return;
-    addMasechtot(plan.id, selectedToAdd);
+    addMasechtot(plan.id, subProgram.id, selectedToAdd);
     setOrder(prev => [...prev, ...selectedToAdd.filter(id => !prev.includes(id))]);
     setSelectedToAdd([]);
     setShowAddPicker(false);
   };
 
   const handleSaveOrder = () => {
-    reorderMasechtot(plan.id, order);
+    reorderMasechtot(plan.id, subProgram.id, order);
     setHasReordered(false);
   };
 
@@ -272,16 +291,15 @@ function MasechtotSettings({
             const m = getMasechet(id);
             if (!m) return null;
             const isCompleted = completedMasechtot.has(id);
-            const units = plan.unit === 'mishnah'
+            const units = subProgram.unit === 'mishnah'
               ? m.chapters.reduce((s, c) => s + c, 0)
               : m.chapters.length;
 
             return (
               <div
                 key={id}
-                className={`flex items-center gap-2 py-2 px-3 rounded-xl transition-all ${
-                  isCompleted ? 'bg-green-50 opacity-60' : 'bg-parchment-50'
-                }`}
+                className={`flex items-center gap-2 py-2 px-3 rounded-xl transition-all ${isCompleted ? 'bg-green-50 opacity-60' : 'bg-parchment-50'
+                  }`}
               >
                 {/* Move buttons */}
                 <div className="flex flex-col gap-0.5">
@@ -310,7 +328,7 @@ function MasechtotSettings({
                 <div className="flex-1 text-right">
                   <span className="font-bold text-primary-800 text-sm">{m.name}</span>
                   <span className="text-xs text-gray-400 mr-2">
-                    {units} {plan.unit === 'mishnah' ? 'משניות' : 'פרקים'}
+                    {units} {subProgram.unit === 'mishnah' ? 'משניות' : 'פרקים'}
                   </span>
                   {isCompleted && <span className="text-xs text-success mr-1">✓</span>}
                 </div>
@@ -358,11 +376,10 @@ function MasechtotSettings({
                       <button
                         key={m.id}
                         onClick={() => toggleAddMasechet(m.id)}
-                        className={`w-full flex items-center justify-between py-1.5 px-3 rounded-lg text-sm transition-all ${
-                          isSelected
-                            ? 'bg-primary-100 text-primary-800'
-                            : 'hover:bg-parchment-100 text-gray-700'
-                        }`}
+                        className={`w-full flex items-center justify-between py-1.5 px-3 rounded-lg text-sm transition-all ${isSelected
+                          ? 'bg-primary-100 text-primary-800'
+                          : 'hover:bg-parchment-100 text-gray-700'
+                          }`}
                       >
                         <span className="text-xs text-gray-400">
                           {getTotalMishnayot(m)} משניות
@@ -394,6 +411,85 @@ function MasechtotSettings({
         השתמש בחצים כדי לשנות את סדר המסכתות.
         {'\n'}מסכתות שכבר נלמדו לא ניתנות להזזה.
       </p>
+    </div>
+  );
+}
+
+// ── Reminder Settings Tab ──
+
+function ReminderSettings({
+  plan,
+  subProgram,
+  updateReminderTime,
+  onClose,
+}: {
+  plan: LearningPlan;
+  subProgram: SubProgram;
+  updateReminderTime: (planId: string, subProgramId: string, time?: string) => void;
+  onClose: () => void;
+}) {
+  const [isEnabled, setIsEnabled] = useState(!!subProgram.reminderTime);
+  const [time, setTime] = useState(subProgram.reminderTime || '08:30');
+
+  const hasChanged =
+    (isEnabled && time !== subProgram.reminderTime) ||
+    (isEnabled !== !!subProgram.reminderTime);
+
+  const handleSave = () => {
+    updateReminderTime(plan.id, subProgram.id, isEnabled ? time : undefined);
+    onClose();
+  };
+
+  return (
+    <div className="space-y-5">
+      <p className="text-sm text-gray-600 text-center">
+        נהל את התזכורת היומית לתוכנית זו
+      </p>
+
+      <div className="card">
+        <div className="flex items-center justify-between mb-2">
+          <label className="font-bold text-primary-700 flex items-center gap-2">
+            <Bell className="w-5 h-5" />
+            תזכורת לימוד
+          </label>
+          <button
+            onClick={async () => {
+              const newState = !isEnabled;
+              setIsEnabled(newState);
+              if (newState) {
+                await requestNotificationPermission();
+              }
+            }}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isEnabled ? 'bg-primary-600' : 'bg-gray-300'
+              }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isEnabled ? '-translate-x-6' : '-translate-x-1'
+                }`}
+            />
+          </button>
+        </div>
+
+        {isEnabled && (
+          <div className="animate-in fade-in slide-in-from-top-2 mt-4">
+            <label className="block text-sm text-gray-500 mb-1">שעת התרעה</label>
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="w-full select-field text-xl font-bold bg-white"
+            />
+          </div>
+        )}
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={!hasChanged}
+        className="btn-primary w-full"
+      >
+        {hasChanged ? 'שמור הגדרות' : 'לא שונה'}
+      </button>
     </div>
   );
 }

@@ -10,22 +10,24 @@ import {
   usePlanStore,
   isChapterPreLearned,
   type LearningPlan,
+  type SubProgram,
   type SkippedChapter,
 } from '../store/usePlanStore';
 
 interface AlreadyLearnedModalProps {
   plan: LearningPlan;
+  subProgram: SubProgram;
   onClose: () => void;
 }
 
-export default function AlreadyLearnedModal({ plan, onClose }: AlreadyLearnedModalProps) {
+export default function AlreadyLearnedModal({ plan, subProgram, onClose }: AlreadyLearnedModalProps) {
   const { addPreLearnedChapters } = usePlanStore();
 
   // Chapters newly selected in this session
   const [selected, setSelected] = useState<SkippedChapter[]>([]);
   const [expandedMasechtot, setExpandedMasechtot] = useState<Set<string>>(new Set());
 
-  const unitLabel = plan.unit === 'mishnah' ? 'משניות' : 'פרקים';
+  const unitLabel = subProgram.unit === 'mishnah' ? 'משניות' : 'פרקים';
 
   // ── Helpers ──
 
@@ -33,7 +35,7 @@ export default function AlreadyLearnedModal({ plan, onClose }: AlreadyLearnedMod
     selected.some(s => s.masechetId === masechetId && s.chapter === chapter);
 
   const isAlreadyPreLearned = (masechetId: string, chapter: number) =>
-    isChapterPreLearned(plan, masechetId, chapter);
+    isChapterPreLearned(subProgram, masechetId, chapter);
 
   const toggleChapter = (masechetId: string, chapter: number) => {
     if (isAlreadyPreLearned(masechetId, chapter)) return; // Already marked
@@ -74,61 +76,61 @@ export default function AlreadyLearnedModal({ plan, onClose }: AlreadyLearnedMod
   // Is this chapter already behind currentPosition (already passed)?
   const isBehindPosition = (masechetId: string, chapter: number): boolean => {
     let globalOffset = 0;
-    for (const mid of plan.masechetIds) {
+    for (const mid of subProgram.masechetIds) {
       const m = getMasechet(mid);
       if (!m) continue;
       if (mid === masechetId) {
-        if (plan.unit === 'perek') {
+        if (subProgram.unit === 'perek') {
           const chGlobal = globalOffset + chapter - 1;
-          return chGlobal < plan.currentPosition;
+          return chGlobal < subProgram.currentPosition;
         } else {
           let localIdx = 0;
           for (let ch = 0; ch < chapter - 1; ch++) localIdx += m.chapters[ch];
           const chEndGlobal = globalOffset + localIdx + m.chapters[chapter - 1];
-          return chEndGlobal <= plan.currentPosition;
+          return chEndGlobal <= subProgram.currentPosition;
         }
       }
-      globalOffset += getMasechetUnits(m, plan.unit);
+      globalOffset += getMasechetUnits(m, subProgram.unit);
     }
     return false;
   };
 
   // Build masechet info
   const masechetInfos = useMemo(() => {
-    return plan.masechetIds.reduce<{
+    return subProgram.masechetIds.reduce<{
       infos: Array<{ masechet: Masechet; id: string; units: number; fullyPassed: boolean; }>;
       offset: number;
     }>((acc, id) => {
       const m = getMasechet(id);
       if (!m) return acc;
-      const units = getMasechetUnits(m, plan.unit);
+      const units = getMasechetUnits(m, subProgram.unit);
       const offset = acc.offset;
 
       const masechetEnd = offset + units;
-      const fullyPassed = plan.currentPosition >= masechetEnd;
+      const fullyPassed = subProgram.currentPosition >= masechetEnd;
 
       acc.infos.push({ masechet: m, id, units, fullyPassed });
       acc.offset += units;
       return acc;
     }, { infos: [], offset: 0 }).infos;
-  }, [plan]);
+  }, [subProgram]);
 
   // Count selected units
   const selectedUnitsCount = useMemo(() => {
-    if (plan.unit === 'perek') return selected.length;
+    if (subProgram.unit === 'perek') return selected.length;
     return selected.reduce((sum, s) => {
       const m = getMasechet(s.masechetId);
       if (!m || s.chapter < 1 || s.chapter > m.chapters.length) return sum;
       return sum + m.chapters[s.chapter - 1];
     }, 0);
-  }, [selected, plan.unit]);
+  }, [selected, subProgram.unit]);
 
   const selectedInMasechet = (masechetId: string) =>
     selected.filter(s => s.masechetId === masechetId).length;
 
   const handleConfirm = () => {
     if (selected.length === 0) return;
-    addPreLearnedChapters(plan.id, selected);
+    addPreLearnedChapters(plan.id, subProgram.id, selected);
     onClose();
   };
 
@@ -153,7 +155,7 @@ export default function AlreadyLearnedModal({ plan, onClose }: AlreadyLearnedMod
             {masechetInfos.map(({ masechet, id, fullyPassed }) => {
               const isExpanded = expandedMasechtot.has(id);
               const numSelected = selectedInMasechet(id);
-              const existingPreLearned = (plan.preLearnedChapters || []).filter(
+              const existingPreLearned = (subProgram.preLearnedChapters || []).filter(
                 pl => pl.masechetId === id
               ).length;
 
@@ -182,10 +184,10 @@ export default function AlreadyLearnedModal({ plan, onClose }: AlreadyLearnedMod
                       <button
                         onClick={() => toggleEntireMasechet(id, masechet)}
                         className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${numSelected === selectableCount && selectableCount > 0
-                            ? 'bg-primary-600 border-primary-600 text-white'
-                            : numSelected > 0
-                              ? 'bg-primary-200 border-primary-400'
-                              : 'border-gray-300 hover:border-primary-400'
+                          ? 'bg-primary-600 border-primary-600 text-white'
+                          : numSelected > 0
+                            ? 'bg-primary-200 border-primary-400'
+                            : 'border-gray-300 hover:border-primary-400'
                           }`}
                       >
                         {numSelected === selectableCount && selectableCount > 0 && <span className="text-xs">✓</span>}
@@ -231,12 +233,12 @@ export default function AlreadyLearnedModal({ plan, onClose }: AlreadyLearnedMod
                               onClick={() => toggleChapter(id, ch)}
                               disabled={behind || alreadyPL}
                               className={`rounded-lg p-1.5 text-center text-xs font-bold transition-all ${behind
-                                  ? 'bg-green-100 text-green-400 opacity-50 cursor-default'
-                                  : alreadyPL
-                                    ? 'bg-green-500 text-white cursor-default'
-                                    : sel
-                                      ? 'bg-primary-600 text-white'
-                                      : 'bg-parchment-100 text-gray-600 hover:bg-parchment-200'
+                                ? 'bg-green-100 text-green-400 opacity-50 cursor-default'
+                                : alreadyPL
+                                  ? 'bg-green-500 text-white cursor-default'
+                                  : sel
+                                    ? 'bg-primary-600 text-white'
+                                    : 'bg-parchment-100 text-gray-600 hover:bg-parchment-200'
                                 }`}
                             >
                               {gematriya(ch)}

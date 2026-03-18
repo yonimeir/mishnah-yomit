@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { BookOpen, Trash2, RotateCcw, Play, CheckCheck, AlertTriangle, Settings } from 'lucide-react';
-import { usePlanStore, getSkippedUnitsCount, getPreLearnedUnitsCount } from '../store/usePlanStore';
+import { BookOpen, Trash2, RotateCcw, Play, CheckCheck, AlertTriangle, Settings, Plus } from 'lucide-react';
+import { usePlanStore, getSkippedUnitsCount, getPreLearnedUnitsCount, type SubProgram, type LearningPlan } from '../store/usePlanStore';
 import { globalToLocal, indexToRef, getUnitLabel, getContentTypeLabels, getMasechet, formatGemaraPoint, formatGemaraItem } from '../data/mishnah-structure';
 import { gematriya, getLearningItemsForDay, getAmountForPosition } from '../services/scheduler';
 import ProgressTable from '../components/ProgressTable';
@@ -11,9 +11,7 @@ import PlanSettingsModal from '../components/PlanSettingsModal';
 export default function PlanDetailPage() {
   const { planId } = useParams<{ planId: string }>();
   const navigate = useNavigate();
-  const { plans, removePlan, resetPlan } = usePlanStore();
-  const [showAlreadyLearned, setShowAlreadyLearned] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+  const { plans, removePlan } = usePlanStore();
 
   const plan = plans.find((p) => p.id === planId);
 
@@ -26,31 +24,82 @@ export default function PlanDetailPage() {
     );
   }
 
-  const holesCount = getSkippedUnitsCount(plan);
-  const preLearnedCount = getPreLearnedUnitsCount(plan);
-  const effectiveLearned = plan.currentPosition - holesCount + preLearnedCount;
-  const effectiveRemaining = plan.totalUnits - plan.currentPosition - preLearnedCount;
-  const progress = Math.round((effectiveLearned / plan.totalUnits) * 100);
+  return (
+    <div className="space-y-6">
+      {/* Overall Plan Header */}
+      <div className="flex items-center justify-between pb-4 border-b border-parchment-200">
+        <div>
+          <h1 className="text-2xl font-bold text-primary-800">{plan.planName}</h1>
+          <p className="text-sm text-gray-500">{plan.subPrograms.length} מסלולי לימוד בתוכנית זו</p>
+        </div>
+        <button
+          onClick={() => {
+            if (confirm('האם אתה בטוח שברצונך למחוק את התוכנית כולה?')) {
+              removePlan(plan.id);
+              navigate('/');
+            }
+          }}
+          className="p-2 bg-red-50 text-danger rounded-xl hover:bg-red-100 transition-colors"
+          title="מחק תוכנית"
+        >
+          <Trash2 className="w-5 h-5" />
+        </button>
+      </div>
+
+      {plan.subPrograms.map((sp) => (
+        <SubProgramSection key={sp.id} plan={plan} subProgram={sp} />
+      ))}
+
+      {/* Button to add a new sub-program to this plan (optional enhancement) */}
+      <div className="pt-4 flex justify-center border-t border-parchment-200">
+        <button
+          onClick={() => {
+            alert('אפשרות להוספת מסלול נוסף על בסיס תוכנית קיימת תתווסף בגרסה הבאה!');
+          }}
+          className="btn-secondary flex items-center justify-center gap-2 text-sm max-w-sm w-full"
+        >
+          <Plus className="w-4 h-4" />
+          הוסף מסלול לימוד חדש לתוכנית
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SubProgramSection({ plan, subProgram }: { plan: LearningPlan, subProgram: SubProgram }) {
+  const navigate = useNavigate();
+  const { resetSubProgram, removeSubProgram } = usePlanStore();
+
+  const [showAlreadyLearned, setShowAlreadyLearned] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  const holesCount = getSkippedUnitsCount(subProgram);
+  const preLearnedCount = getPreLearnedUnitsCount(subProgram);
+  const effectiveLearned = subProgram.currentPosition - holesCount + preLearnedCount;
+  const effectiveRemaining = subProgram.totalUnits - subProgram.currentPosition - preLearnedCount;
+  const progress = Math.round((effectiveLearned / subProgram.totalUnits) * 100);
 
   // Get current position info
-  const currentLoc = !plan.isCompleted
-    ? globalToLocal(plan.masechetIds, plan.currentPosition, plan.unit)
+  const currentLoc = !subProgram.isCompleted
+    ? globalToLocal(subProgram.masechetIds, subProgram.currentPosition, subProgram.unit)
     : null;
 
   // Compute today's actual amount (tapered vs even)
-  const todayAmount = getAmountForPosition(plan.currentPosition, plan.calculatedAmountPerDay, plan.distribution);
+  const todayAmount = getAmountForPosition(subProgram.currentPosition, subProgram.calculatedAmountPerDay, subProgram.distribution);
 
   // Get today's learning items
-  const todayItems = plan.isCompleted
+  const todayItems = subProgram.isCompleted
     ? []
-    : getLearningItemsForDay(plan.masechetIds, plan.unit, plan.currentPosition, todayAmount, plan.preLearnedChapters);
+    : getLearningItemsForDay(subProgram.masechetIds, subProgram.unit, subProgram.currentPosition, todayAmount, subProgram.preLearnedChapters as any);
 
-  const ct = plan.contentType || 'mishnah';
-  const unitLabel = getUnitLabel(ct, plan.unit);
+  const ct = subProgram.contentType || 'mishnah';
+  const unitLabel = getUnitLabel(ct, subProgram.unit);
   const ctLabels = getContentTypeLabels(ct);
 
+  const displayName = subProgram.name || 'מסלול ראשי';
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 mb-8">
       {/* Header card */}
       <div className="card">
         <div className="flex items-center gap-3 mb-4">
@@ -58,18 +107,18 @@ export default function PlanDetailPage() {
             <BookOpen className="w-6 h-6 text-primary-600" />
           </div>
           <div className="flex-1">
-            <h2 className="text-xl font-bold text-primary-800">{plan.planName}</h2>
+            <h2 className="text-xl font-bold text-primary-800">{displayName}</h2>
             <p className="text-sm text-gray-500">
-              {plan.mode === 'by_book' ? 'לפי ספר' : 'לפי קצב'} •{' '}
+              {subProgram.mode === 'by_book' ? 'לפי ספר' : 'לפי קצב'} •{' '}
               {unitLabel}
-              {plan.masechetIds.length > 1 && ` • ${plan.masechetIds.length} ${ctLabels.bookPlural}`}
+              {subProgram.masechetIds.length > 1 && ` • ${subProgram.masechetIds.length} ${ctLabels.bookPlural}`}
             </p>
           </div>
-          {!plan.isCompleted && (
+          {!subProgram.isCompleted && (
             <button
               onClick={() => setShowSettings(true)}
               className="p-2 rounded-xl hover:bg-parchment-200 transition-colors"
-              title="הגדרות תוכנית"
+              title="הגדרות מסלול"
             >
               <Settings className="w-5 h-5 text-gray-500" />
             </button>
@@ -79,14 +128,14 @@ export default function PlanDetailPage() {
         {/* Progress bar */}
         <div className="w-full bg-parchment-200 rounded-full h-4 mb-2 relative overflow-hidden">
           <div
-            className={`absolute inset-y-0 right-0 rounded-full transition-all duration-500 ${plan.isCompleted ? 'bg-gold-500' : 'bg-primary-500'
+            className={`absolute inset-y-0 right-0 rounded-full transition-all duration-500 ${subProgram.isCompleted ? 'bg-gold-500' : 'bg-primary-500'
               }`}
             style={{ width: `${progress}%` }}
           />
         </div>
         <div className="flex justify-between text-sm mb-4">
           <span className="text-gray-500">
-            {effectiveLearned} / {plan.totalUnits}
+            {effectiveLearned} / {subProgram.totalUnits}
           </span>
           <span className="font-bold text-primary-700">{progress}%</span>
         </div>
@@ -98,7 +147,7 @@ export default function PlanDetailPage() {
             <p className="text-xs text-gray-500">{unitLabel}/יום</p>
           </div>
           <div className="bg-parchment-50 rounded-xl py-2">
-            <p className="text-lg font-bold text-primary-800">{plan.completedDates.length}</p>
+            <p className="text-lg font-bold text-primary-800">{subProgram.completedDates.length}</p>
             <p className="text-xs text-gray-500">ימי לימוד</p>
           </div>
           <div className="bg-parchment-50 rounded-xl py-2">
@@ -124,15 +173,15 @@ export default function PlanDetailPage() {
         )}
 
         {/* Distribution info */}
-        {plan.distribution && !plan.distribution.isExact && plan.distribution.strategy === 'tapered' && !plan.isCompleted && (
+        {subProgram.distribution && !subProgram.distribution.isExact && subProgram.distribution.strategy === 'tapered' && !subProgram.isCompleted && (
           <div className="bg-parchment-50 rounded-xl px-3 py-2 text-xs text-gray-500 text-center mt-2">
-            {plan.currentPosition < plan.distribution.cutoffPosition ? (
+            {subProgram.currentPosition < subProgram.distribution.cutoffPosition ? (
               <span>
-                📊 {plan.distribution.highAmount} {unitLabel}/יום עכשיו, יירד ל-{plan.distribution.lowAmount} בהמשך
+                📊 {subProgram.distribution.highAmount} {unitLabel}/יום עכשיו, יירד ל-{subProgram.distribution.lowAmount} בהמשך
               </span>
             ) : (
               <span>
-                📊 ירדת ל-{plan.distribution.lowAmount} {unitLabel}/יום (סיום בדיוק ביעד)
+                📊 ירדת ל-{subProgram.distribution.lowAmount} {unitLabel}/יום (סיום בדיוק ביעד)
               </span>
             )}
           </div>
@@ -148,7 +197,7 @@ export default function PlanDetailPage() {
             </div>
             <div className="flex-1">
               <p className="font-bold text-amber-800 text-sm">
-                יש {plan.skippedChapters.length} פרקים שדילגת עליהם
+                יש {subProgram.skippedChapters.length} פרקים שדילגת עליהם
               </p>
               <p className="text-xs text-amber-600 mt-0.5">
                 לחץ על פרק כתום בטבלה כדי לסמן כנלמד
@@ -163,10 +212,10 @@ export default function PlanDetailPage() {
         <div className="card bg-primary-50 border-primary-200">
           <p className="text-sm text-primary-600 mb-1">המיקום הנוכחי שלך:</p>
           <p className="font-bold text-primary-800">
-            {plan.masechetIds.length > 1 && `מסכת ${currentLoc.masechet.name} • `}
-            {plan.contentType === 'gemara'
+            {subProgram.masechetIds.length > 1 && `מסכת ${currentLoc.masechet.name} • `}
+            {subProgram.contentType === 'gemara'
               ? formatGemaraPoint(currentLoc.masechet, currentLoc.positionInMasechet)
-              : (plan.unit === 'mishnah'
+              : (subProgram.unit === 'mishnah'
                 ? (() => {
                   const ref = indexToRef(currentLoc.masechet, currentLoc.positionInMasechet);
                   return `פרק ${gematriya(ref.chapter)} משנה ${gematriya(ref.mishnah)}`;
@@ -179,8 +228,8 @@ export default function PlanDetailPage() {
       )}
 
       {/* Today's learning */}
-      {!plan.isCompleted && todayItems.length > 0 && (
-        <div className="card">
+      {!subProgram.isCompleted && todayItems.length > 0 && (
+        <div className="card border border-primary-200">
           <h3 className="font-bold text-primary-700 mb-3">הלימוד של היום</h3>
           <div className="space-y-2 mb-4">
             {todayItems.map((item, idx) => (
@@ -189,8 +238,8 @@ export default function PlanDetailPage() {
                   {item.toMishnah - item.fromMishnah + 1} {unitLabel}
                 </span>
                 <span className="font-bold text-primary-800">
-                  {plan.masechetIds.length > 1 && <span className="text-xs text-gray-500 ml-2">{item.masechetName}</span>}
-                  {plan.contentType === 'gemara' ? (
+                  {subProgram.masechetIds.length > 1 && <span className="text-xs text-gray-500 ml-2">{item.masechetName}</span>}
+                  {subProgram.contentType === 'gemara' ? (
                     formatGemaraItem(getMasechet(item.masechetId), item.chapter, item.fromMishnah, item.toMishnah)
                   ) : (
                     <>
@@ -206,42 +255,42 @@ export default function PlanDetailPage() {
           </div>
 
           <button
-            onClick={() => navigate(`/learn/${plan.id}`)}
+            onClick={() => navigate(`/learn/${plan.id}/${subProgram.id}`)}
             className="btn-primary w-full flex items-center justify-center gap-2"
           >
             <Play className="w-5 h-5" />
-            התחל ללמוד
+            התחל ללמוד במסלול זה
           </button>
         </div>
       )}
 
       {/* Completed banner */}
-      {plan.isCompleted && holesCount === 0 && (
+      {subProgram.isCompleted && holesCount === 0 && (
         <div className="card bg-green-50 border-green-200 text-center">
           <p className="text-2xl mb-2">🎉</p>
           <p className="text-lg font-bold text-success">הדרן עלך!</p>
-          <p className="text-sm text-gray-600">סיימת את {plan.planName}</p>
+          <p className="text-sm text-gray-600">סיימת את מסלול {displayName}</p>
         </div>
       )}
 
-      {plan.isCompleted && holesCount > 0 && (
+      {subProgram.isCompleted && holesCount > 0 && (
         <div className="card bg-amber-50 border-amber-200 text-center">
           <p className="text-2xl mb-2">📋</p>
           <p className="text-lg font-bold text-amber-800">כמעט סיימת!</p>
           <p className="text-sm text-amber-600">
-            נותרו {holesCount} {unitLabel} להשלמה
+            נותרו {holesCount} {unitLabel} להשלמה במסלול
           </p>
         </div>
       )}
 
       {/* Already learned button */}
-      {!plan.isCompleted && (
+      {!subProgram.isCompleted && (
         <button
           onClick={() => setShowAlreadyLearned(true)}
           className="btn-secondary w-full flex items-center justify-center gap-2"
         >
           <CheckCheck className="w-5 h-5" />
-          כבר למדתי
+          כבר למדתי (דילוג על פרקים)
         </button>
       )}
 
@@ -249,6 +298,7 @@ export default function PlanDetailPage() {
       {showAlreadyLearned && (
         <AlreadyLearnedModal
           plan={plan}
+          subProgram={subProgram}
           onClose={() => setShowAlreadyLearned(false)}
         />
       )}
@@ -257,44 +307,55 @@ export default function PlanDetailPage() {
       {showSettings && (
         <PlanSettingsModal
           plan={plan}
+          subProgram={subProgram}
           onClose={() => setShowSettings(false)}
         />
       )}
 
       {/* Progress table */}
-      <ProgressTable plan={plan} />
+      <ProgressTable plan={plan} subProgram={subProgram} />
 
       {/* Actions */}
-      <div className="flex gap-3">
-        <button
-          onClick={() => setShowSettings(true)}
-          className="btn-secondary flex-1 flex items-center justify-center gap-2 text-sm"
-        >
-          <Settings className="w-4 h-4" />
-          הגדרות
-        </button>
-        <button
-          onClick={() => {
-            if (confirm('האם אתה בטוח שברצונך לאפס את ההתקדמות?')) resetPlan(plan.id);
-          }}
-          className="btn-secondary flex-1 flex items-center justify-center gap-2 text-sm"
-        >
-          <RotateCcw className="w-4 h-4" />
-          אפס
-        </button>
-        <button
-          onClick={() => {
-            if (confirm('האם אתה בטוח שברצונך למחוק את התוכנית?')) {
-              removePlan(plan.id);
-              navigate('/');
-            }
-          }}
-          className="flex-1 bg-red-50 text-danger px-4 py-3 rounded-xl font-bold border-2 border-red-200 hover:bg-red-100 transition-colors flex items-center justify-center gap-2 text-sm"
-        >
-          <Trash2 className="w-4 h-4" />
-          מחק
-        </button>
-      </div>
+      {plan.subPrograms.length > 1 && (
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              if (confirm('האם אתה בטוח שברצונך לאפס את ההתקדמות במסלול זה?')) resetSubProgram(plan.id, subProgram.id);
+            }}
+            className="btn-secondary flex-1 flex items-center justify-center gap-2 text-sm"
+          >
+            <RotateCcw className="w-4 h-4" />
+            אפס התקדמות
+          </button>
+          <button
+            onClick={() => {
+              if (confirm('האם למחוק מסלול זה מסל הקורסים של התוכנית?')) {
+                removeSubProgram(plan.id, subProgram.id);
+              }
+            }}
+            className="flex-1 bg-red-50 text-danger px-4 py-3 rounded-xl font-bold border-2 border-red-200 hover:bg-red-100 transition-colors flex items-center justify-center gap-2 text-sm"
+          >
+            <Trash2 className="w-4 h-4" />
+            מחק מסלול
+          </button>
+        </div>
+      )}
+
+      {plan.subPrograms.length === 1 && (
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              if (confirm('האם אתה בטוח שברצונך לאפס את ההתקדמות בתוכנית?')) {
+                resetSubProgram(plan.id, subProgram.id);
+              }
+            }}
+            className="btn-secondary flex-1 flex items-center justify-center gap-2 text-sm"
+          >
+            <RotateCcw className="w-4 h-4" />
+            אפס התקדמות
+          </button>
+        </div>
+      )}
     </div>
   );
 }

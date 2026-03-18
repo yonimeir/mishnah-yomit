@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, Check, BookOpen } from 'lucide-react';
 import { usePlanStore } from '../store/usePlanStore';
-import { getLearningItemsForDay, getAmountForPosition, gematriya } from '../services/scheduler';
+import { getLearningItemsForDay, getAmountForPosition, gematriya, getTodaySubPrograms } from '../services/scheduler';
 import { getMasechet, getMasechetUnits, globalToLocal, getSederForMasechet, formatGemaraItem } from '../data/mishnah-structure';
 import MishnahTextDisplay from '../components/MishnahText';
 import CompletionCelebration from '../components/CompletionCelebration';
@@ -15,11 +15,19 @@ interface ContinueInfo {
 }
 
 export default function LearningPage() {
-  const { planId } = useParams<{ planId: string }>();
+  const { planId, subProgramId } = useParams<{ planId: string; subProgramId?: string }>();
   const navigate = useNavigate();
   const { plans, markDayComplete, reorderMasechtot } = usePlanStore();
 
   const plan = plans.find((p) => p.id === planId);
+
+  // Fallback: if no subProgramId provided, pick the first one that has tasks today
+  let subProgram = plan?.subPrograms.find(sp => sp.id === subProgramId);
+  if (plan && !subProgram) {
+    const todays = getTodaySubPrograms(plan);
+    subProgram = todays.length > 0 ? todays[0].subProgram : plan.subPrograms[0];
+  }
+
   const [currentItemIdx, setCurrentItemIdx] = useState(0);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showNextMasechet, setShowNextMasechet] = useState(false);
@@ -27,7 +35,7 @@ export default function LearningPage() {
   const [showDayComplete, setShowDayComplete] = useState(false);
   const [continueInfo, setContinueInfo] = useState<ContinueInfo | null>(null);
 
-  if (!plan) {
+  if (!plan || !subProgram) {
     return (
       <div className="text-center py-16">
         <p className="text-gray-500">התוכנית לא נמצאה</p>
@@ -36,13 +44,13 @@ export default function LearningPage() {
     );
   }
 
-  const todayAmount = getAmountForPosition(plan.currentPosition, plan.calculatedAmountPerDay, plan.distribution);
+  const todayAmount = getAmountForPosition(subProgram.currentPosition, subProgram.calculatedAmountPerDay, subProgram.distribution);
   const items = getLearningItemsForDay(
-    plan.masechetIds,
-    plan.unit,
-    plan.currentPosition,
+    subProgram.masechetIds,
+    subProgram.unit,
+    subProgram.currentPosition,
     todayAmount,
-    plan.preLearnedChapters
+    subProgram.preLearnedChapters as any
   );
 
   if (items.length === 0) {
@@ -57,28 +65,23 @@ export default function LearningPage() {
   const currentItem = items[currentItemIdx];
   const isLastItem = currentItemIdx === items.length - 1;
 
-  /** Check if completing today's lesson finishes a masechet (for multi-masechet plans) */
   const checkMasechetCompletion = (totalCompleted: number): string | null => {
-    if (plan.masechetIds.length <= 1) return null;
+    if (subProgram.masechetIds.length <= 1) return null;
 
-    const newPosition = plan.currentPosition + totalCompleted;
+    const newPosition = subProgram.currentPosition + totalCompleted;
 
-    // Find the masechet we're currently in
-    const currentLoc = globalToLocal(plan.masechetIds, plan.currentPosition, plan.unit);
+    const currentLoc = globalToLocal(subProgram.masechetIds, subProgram.currentPosition, subProgram.unit);
     if (!currentLoc) return null;
 
-    // Check if the new position crosses into a new masechet
-    const newLoc = globalToLocal(plan.masechetIds, newPosition, plan.unit);
-    if (!newLoc) return null; // Might mean we're past the end
+    const newLoc = globalToLocal(subProgram.masechetIds, newPosition, subProgram.unit);
+    if (!newLoc) return null;
 
-    // If we moved to a different masechet, the previous one was completed
     if (newLoc.masechet.id !== currentLoc.masechet.id) {
       return currentLoc.masechet.id;
     }
 
-    // Also check: if we completed the entire masechet exactly
     const m = currentLoc.masechet;
-    const masechetUnits = getMasechetUnits(m, plan.unit);
+    const masechetUnits = getMasechetUnits(m, subProgram.unit);
     if (currentLoc.positionInMasechet + totalCompleted >= masechetUnits) {
       return m.id;
     }
@@ -88,7 +91,7 @@ export default function LearningPage() {
 
   const computeContinueInfo = (): ContinueInfo | null => {
     const lastItem = items[items.length - 1];
-    const ct = plan.contentType || 'mishnah';
+    const ct = subProgram.contentType || 'mishnah';
     const masechet = getMasechet(lastItem.masechetId);
     if (!masechet) return null;
 
@@ -97,10 +100,9 @@ export default function LearningPage() {
       return { masechetId: lastItem.masechetId, chapter: nextChapter, contentType: ct };
     }
 
-    // Finished this masechet - find the next one in the plan or just go to first chapter
-    const currentMasechetIdx = plan.masechetIds.indexOf(lastItem.masechetId);
-    if (currentMasechetIdx < plan.masechetIds.length - 1) {
-      return { masechetId: plan.masechetIds[currentMasechetIdx + 1], chapter: 1, contentType: ct };
+    const currentMasechetIdx = subProgram.masechetIds.indexOf(lastItem.masechetId);
+    if (currentMasechetIdx < subProgram.masechetIds.length - 1) {
+      return { masechetId: subProgram.masechetIds[currentMasechetIdx + 1], chapter: 1, contentType: ct };
     }
 
     return { masechetId: lastItem.masechetId, chapter: 1, contentType: ct };
@@ -108,7 +110,7 @@ export default function LearningPage() {
 
   const handleComplete = () => {
     let totalCompleted = 0;
-    if (plan.unit === 'perek') {
+    if (subProgram.unit === 'perek') {
       totalCompleted = items.length;
     } else {
       totalCompleted = items.reduce(
@@ -117,24 +119,20 @@ export default function LearningPage() {
       );
     }
 
-    // Check if a masechet was completed
     const finishedMasechetId = checkMasechetCompletion(totalCompleted);
 
-    // Compute next chapter BEFORE updating state
     const nextInfo = computeContinueInfo();
     setContinueInfo(nextInfo);
 
     const today = new Date().toISOString().split('T')[0];
-    markDayComplete(plan.id, today, totalCompleted);
+    markDayComplete(plan.id, subProgram.id, today, totalCompleted);
 
-    // Check if the whole plan is completed
-    if (plan.currentPosition + totalCompleted >= plan.totalUnits) {
+    if (subProgram.currentPosition + totalCompleted >= subProgram.totalUnits) {
       setShowCelebration(true);
       return;
     }
 
-    // If a masechet was completed in a multi-masechet plan, show next-masechet picker
-    if (finishedMasechetId && plan.masechetIds.length > 2) {
+    if (finishedMasechetId && subProgram.masechetIds.length > 2) {
       setCompletedMasechetId(finishedMasechetId);
       setShowNextMasechet(true);
       return;
@@ -160,29 +158,26 @@ export default function LearningPage() {
 
   const handleNextMasechetChoice = (chosenMasechetId: string | null) => {
     if (chosenMasechetId && chosenMasechetId !== null) {
-      // User chose a different masechet - reorder so chosen is next
-      const currentIdx = plan.masechetIds.indexOf(chosenMasechetId);
+      const currentIdx = subProgram.masechetIds.indexOf(chosenMasechetId);
       if (currentIdx > -1) {
-        // Find the first uncompleted position
         let firstUncompletedIdx = 0;
         let offset = 0;
-        for (let i = 0; i < plan.masechetIds.length; i++) {
-          const m = getMasechet(plan.masechetIds[i]);
+        for (let i = 0; i < subProgram.masechetIds.length; i++) {
+          const m = getMasechet(subProgram.masechetIds[i]);
           if (!m) continue;
-          const units = getMasechetUnits(m, plan.unit);
-          if (plan.currentPosition < offset + units) {
+          const units = getMasechetUnits(m, subProgram.unit);
+          if (subProgram.currentPosition < offset + units) {
             firstUncompletedIdx = i;
             break;
           }
           offset += units;
         }
 
-        // Move chosen masechet to the first uncompleted position
         if (currentIdx !== firstUncompletedIdx) {
-          const newOrder = [...plan.masechetIds];
+          const newOrder = [...subProgram.masechetIds];
           const [moved] = newOrder.splice(currentIdx, 1);
           newOrder.splice(firstUncompletedIdx, 0, moved);
-          reorderMasechtot(plan.id, newOrder);
+          reorderMasechtot(plan.id, subProgram.id, newOrder);
         }
       }
     }
@@ -196,7 +191,7 @@ export default function LearningPage() {
     <div className="space-y-4">
       {showCelebration && (
         <CompletionCelebration
-          masechetName={plan.planName}
+          masechetName={subProgram.name || plan.planName}
           onClose={() => navigate(`/plan/${plan.id}`)}
         />
       )}
@@ -204,6 +199,7 @@ export default function LearningPage() {
       {showNextMasechet && completedMasechetId && (
         <NextMasechetModal
           plan={plan}
+          subProgramId={subProgram.id}
           completedMasechetId={completedMasechetId}
           onChoose={handleNextMasechetChoice}
         />
@@ -266,8 +262,8 @@ export default function LearningPage() {
                 : 'bg-parchment-200 text-gray-600'
                 }`}
             >
-              {plan.masechetIds.length > 1 && `${item.masechetName} `}
-              {plan.contentType === 'gemara' ? (
+              {subProgram.masechetIds.length > 1 && `${item.masechetName} `}
+              {subProgram.contentType === 'gemara' ? (
                 formatGemaraItem(getMasechet(item.masechetId), item.chapter, item.fromMishnah, item.toMishnah)
               ) : (
                 <>
@@ -288,7 +284,7 @@ export default function LearningPage() {
         fromMishnah={currentItem.fromMishnah}
         toMishnah={currentItem.toMishnah}
         masechetName={currentItem.masechetName}
-        contentType={plan.contentType || 'mishnah'}
+        contentType={subProgram.contentType || 'mishnah'}
         masechetId={currentItem.masechetId}
       />
 

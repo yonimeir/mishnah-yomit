@@ -4,6 +4,7 @@ import {
   globalToLocal,
   indexToRef,
 } from '../data/mishnah-structure';
+import type { LearningPlan, SubProgram } from '../store/usePlanStore';
 
 export type { LearningUnit };
 export type FrequencyType = 'days_per_week' | 'days_per_month' | 'specific_days';
@@ -261,6 +262,44 @@ export function getLearningItemsForDay(
   }
 
   return items;
+}
+
+export function getTodaySubPrograms(plan: LearningPlan): { subProgram: SubProgram; items: LearningItem[] }[] {
+  const today = new Date();
+  const results: { subProgram: SubProgram; items: LearningItem[] }[] = [];
+
+  for (const sp of plan.subPrograms) {
+    if (sp.isCompleted) continue;
+
+    // Check if today is a scheduled learning day for this sub-program
+    if (!isLearningDay(today, sp.frequency)) continue;
+
+    // Check if already completed today
+    // Note: completedDates stores as YYYY-MM-DD
+    // To match local time properly:
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    if (sp.completedDates.includes(todayStr)) continue;
+
+    const todayAmount = getAmountForPosition(
+      sp.currentPosition,
+      sp.calculatedAmountPerDay,
+      sp.distribution
+    );
+
+    const items = getLearningItemsForDay(
+      sp.masechetIds,
+      sp.unit,
+      sp.currentPosition,
+      todayAmount,
+      sp.preLearnedChapters as PreLearnedChapter[]
+    );
+
+    if (items.length > 0) {
+      results.push({ subProgram: sp, items });
+    }
+  }
+
+  return results;
 }
 
 // ── Recalculation after skip ──

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Clock, ArrowRight, Check, Library, BookMarked, ScrollText, Scale } from 'lucide-react';
+import { BookOpen, Clock, ArrowRight, Check, Library, BookMarked, ScrollText, Scale, Bell } from 'lucide-react';
 import {
   getTotalMishnayot,
   getMultiMasechetTotalUnits,
@@ -21,6 +21,7 @@ import {
 import type { FrequencyType, ScheduleFrequency } from '../services/scheduler';
 import { usePlanStore, generateId, type LearningPlan } from '../store/usePlanStore';
 import HebrewDatePicker from '../components/HebrewDatePicker';
+import { requestNotificationPermission } from '../services/notifications';
 
 type Step = 'content_type' | 'mode' | 'scope' | 'masechet' | 'settings';
 type SelectionScope = 'single' | 'multiple' | 'seder' | 'shas';
@@ -45,6 +46,8 @@ export default function NewPlanPage() {
   const [specificDays, setSpecificDays] = useState<number[]>([0, 1, 2, 3, 4]);
   const [reviewEvery, setReviewEvery] = useState<number>(0);
   const [distributionStrategy, setDistributionStrategy] = useState<'even' | 'tapered'>('tapered');
+  const [isReminderEnabled, setIsReminderEnabled] = useState(false);
+  const [reminderTime, setReminderTime] = useState('08:30');
 
   const frequency: ScheduleFrequency = {
     type: freqType,
@@ -106,12 +109,11 @@ export default function NewPlanPage() {
       estEndDate = result.estimatedEndDate.toISOString().split('T')[0];
     }
 
-    const plan: LearningPlan = {
+    const sp = {
       id: generateId(),
-      createdAt: new Date().toISOString(),
+      name: masechetIds.length > 1 ? 'חלק עיקרי' : undefined,
       contentType,
       masechetIds,
-      planName,
       mode,
       unit,
       frequency,
@@ -126,6 +128,14 @@ export default function NewPlanPage() {
       skippedChapters: [],
       preLearnedChapters: [],
       distribution,
+      reminderTime: isReminderEnabled ? reminderTime : undefined,
+    };
+
+    const plan: LearningPlan = {
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+      planName,
+      subPrograms: [sp as any],
     };
 
     addPlan(plan);
@@ -552,6 +562,44 @@ export default function NewPlanPage() {
               <option value={4}>כל 4 ימי לימוד</option>
               <option value={3}>כל 3 ימי לימוד</option>
             </select>
+          </div>
+
+          {/* Reminder Section */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-2">
+              <label className="font-bold text-primary-700 flex items-center gap-2">
+                <Bell className="w-5 h-5" />
+                תזכורת לימוד
+              </label>
+              <button
+                onClick={async () => {
+                  const newState = !isReminderEnabled;
+                  setIsReminderEnabled(newState);
+                  if (newState) {
+                    await requestNotificationPermission();
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isReminderEnabled ? 'bg-primary-600' : 'bg-gray-300'
+                  }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isReminderEnabled ? '-translate-x-6' : '-translate-x-1'
+                    }`}
+                />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-3">קבל התראה בדפדפן כשהגיע הזמן ללמוד</p>
+
+            {isReminderEnabled && (
+              <div className="animate-in fade-in slide-in-from-top-2">
+                <input
+                  type="time"
+                  value={reminderTime}
+                  onChange={(e) => setReminderTime(e.target.value)}
+                  className="w-full select-field text-xl font-bold bg-white"
+                />
+              </div>
+            )}
           </div>
 
           {/* Preview */}
