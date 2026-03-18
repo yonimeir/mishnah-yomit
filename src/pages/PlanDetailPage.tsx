@@ -53,9 +53,7 @@ export default function PlanDetailPage() {
       {/* Button to add a new sub-program to this plan (optional enhancement) */}
       <div className="pt-4 flex justify-center border-t border-parchment-200">
         <button
-          onClick={() => {
-            alert('אפשרות להוספת מסלול נוסף על בסיס תוכנית קיימת תתווסף בגרסה הבאה!');
-          }}
+          onClick={() => navigate(`/plan/${plan.id}/add-subprogram`)}
           className="btn-secondary flex items-center justify-center gap-2 text-sm max-w-sm w-full"
         >
           <Plus className="w-4 h-4" />

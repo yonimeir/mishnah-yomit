@@ -78,6 +78,7 @@ interface PlanStore {
   updatePlanName: (planId: string, name: string) => void;
   updateReminderTime: (planId: string, subProgramId: string, time?: string) => void;
   resetPlan: (planId: string) => void;
+  resetSubProgram: (planId: string, subProgramId: string) => void;
 
   // SubProgram exclusive actions
   addSubProgramToPlan: (planId: string, subProgram: SubProgram) => void;
@@ -368,6 +369,30 @@ export const usePlanStore = create<PlanStore>()(
                   skippedChapters: [],
                   preLearnedChapters: [],
                 }))
+              }
+              : p
+          ),
+        })),
+
+      resetSubProgram: (planId, subProgramId) =>
+        set((state) => ({
+          plans: state.plans.map((p) =>
+            p.id === planId
+              ? {
+                ...p,
+                subPrograms: p.subPrograms.map((sp) =>
+                  sp.id === subProgramId
+                    ? {
+                      ...sp,
+                      currentPosition: 0,
+                      completedDates: [],
+                      lastLearningDate: undefined,
+                      isCompleted: false,
+                      skippedChapters: [],
+                      preLearnedChapters: [],
+                    }
+                    : sp
+                )
               }
               : p
           ),

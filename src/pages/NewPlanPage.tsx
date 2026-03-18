@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { BookOpen, Clock, ArrowRight, Check, Library, BookMarked, ScrollText, Scale, Bell } from 'lucide-react';
 import {
   getTotalMishnayot,
@@ -29,8 +29,9 @@ type SelectionScope = 'single' | 'multiple' | 'seder' | 'shas';
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
 export default function NewPlanPage() {
+  const { planId } = useParams<{ planId?: string }>();
   const navigate = useNavigate();
-  const { addPlan } = usePlanStore();
+  const { addPlan, addSubProgramToPlan } = usePlanStore();
 
   const [step, setStep] = useState<Step>('content_type');
   const [contentType, setContentType] = useState<ContentType>('mishnah');
@@ -131,15 +132,20 @@ export default function NewPlanPage() {
       reminderTime: isReminderEnabled ? reminderTime : undefined,
     };
 
-    const plan: LearningPlan = {
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-      planName,
-      subPrograms: [sp as any],
-    };
+    if (planId) {
+      addSubProgramToPlan(planId, sp as any);
+      navigate(`/plan/${planId}`);
+    } else {
+      const plan: LearningPlan = {
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+        planName,
+        subPrograms: [sp as any],
+      };
 
-    addPlan(plan);
-    navigate(`/plan/${plan.id}`);
+      addPlan(plan);
+      navigate(`/plan/${plan.id}`);
+    }
   };
 
   const goBack = () => {
@@ -723,7 +729,7 @@ export default function NewPlanPage() {
             disabled={mode === 'by_book' && !targetDate}
             className="btn-primary w-full text-lg"
           >
-            צור תוכנית לימוד
+            {planId ? 'הוסף מסלול לימוד' : 'צור תוכנית לימוד'}
           </button>
         </div>
       )}
