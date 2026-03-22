@@ -1,23 +1,17 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, Check, BookOpen } from 'lucide-react';
-import { usePlanStore } from '../store/usePlanStore';
+import { ArrowRight, ArrowLeft, Check, BookOpen, Square } from 'lucide-react';
+import { usePlanStore, getPreLearnedUnitsCount } from '../store/usePlanStore';
 import { getLearningItemsForDay, getAmountForPosition, gematriya, getTodaySubPrograms } from '../services/scheduler';
-import { getMasechet, getMasechetUnits, globalToLocal, getSederForMasechet, formatGemaraItem } from '../data/mishnah-structure';
+import { getMasechet, getMasechetUnits, globalToLocal, formatGemaraItem, getUnitLabel } from '../data/mishnah-structure';
 import MishnahTextDisplay from '../components/MishnahText';
 import CompletionCelebration from '../components/CompletionCelebration';
 import NextMasechetModal from '../components/NextMasechetModal';
 
-interface ContinueInfo {
-  masechetId: string;
-  chapter: number;
-  contentType: 'mishnah' | 'gemara' | 'rambam';
-}
-
 export default function LearningPage() {
   const { planId, subProgramId } = useParams<{ planId: string; subProgramId?: string }>();
   const navigate = useNavigate();
-  const { plans, markDayComplete, reorderMasechtot } = usePlanStore();
+  const { plans, markDayComplete, reorderMasechtot, advancePositionBy } = usePlanStore();
 
   const plan = plans.find((p) => p.id === planId);
 
@@ -33,7 +27,7 @@ export default function LearningPage() {
   const [showNextMasechet, setShowNextMasechet] = useState(false);
   const [completedMasechetId, setCompletedMasechetId] = useState<string | null>(null);
   const [showDayComplete, setShowDayComplete] = useState(false);
-  const [continueInfo, setContinueInfo] = useState<ContinueInfo | null>(null);
+  const [showContinuation, setShowContinuation] = useState(false);
 
   if (!plan || !subProgram) {
     return (
@@ -89,25 +83,6 @@ export default function LearningPage() {
     return null;
   };
 
-  const computeContinueInfo = (): ContinueInfo | null => {
-    const lastItem = items[items.length - 1];
-    const ct = subProgram.contentType || 'mishnah';
-    const masechet = getMasechet(lastItem.masechetId);
-    if (!masechet) return null;
-
-    const nextChapter = lastItem.chapter + 1;
-    if (nextChapter <= masechet.chapters.length) {
-      return { masechetId: lastItem.masechetId, chapter: nextChapter, contentType: ct };
-    }
-
-    const currentMasechetIdx = subProgram.masechetIds.indexOf(lastItem.masechetId);
-    if (currentMasechetIdx < subProgram.masechetIds.length - 1) {
-      return { masechetId: subProgram.masechetIds[currentMasechetIdx + 1], chapter: 1, contentType: ct };
-    }
-
-    return { masechetId: lastItem.masechetId, chapter: 1, contentType: ct };
-  };
-
   const handleComplete = () => {
     let totalCompleted = 0;
     if (subProgram.unit === 'perek') {
@@ -120,9 +95,6 @@ export default function LearningPage() {
     }
 
     const finishedMasechetId = checkMasechetCompletion(totalCompleted);
-
-    const nextInfo = computeContinueInfo();
-    setContinueInfo(nextInfo);
 
     const today = new Date().toISOString().split('T')[0];
     markDayComplete(plan.id, subProgram.id, today, totalCompleted);
@@ -141,19 +113,16 @@ export default function LearningPage() {
     setShowDayComplete(true);
   };
 
-  const handleContinueFreeLearning = () => {
-    if (!continueInfo) return;
-    const masechet = getMasechet(continueInfo.masechetId);
-    if (!masechet) return;
-    const seder = getSederForMasechet(continueInfo.masechetId);
-    navigate('/free', {
-      state: {
-        contentType: continueInfo.contentType,
-        sederId: seder?.id,
-        masechetId: continueInfo.masechetId,
-        chapter: continueInfo.chapter,
-      },
-    });
+  const handleStartContinuation = () => {
+    setShowDayComplete(false);
+    setShowContinuation(true);
+  };
+
+  const handleContinuationMark = () => {
+    if (continuationItems.length === 0) return;
+    const item = continuationItems[0];
+    const units = subProgram.unit === 'perek' ? 1 : (item.toMishnah - item.fromMishnah + 1);
+    advancePositionBy(plan.id, subProgram.id, units);
   };
 
   const handleNextMasechetChoice = (chosenMasechetId: string | null) => {
@@ -187,6 +156,21 @@ export default function LearningPage() {
 
   const chapterRef = `${currentItem.sefariaName} ${currentItem.chapter}`;
 
+  // Continuation mode: get 1 unit at a time from current plan position
+  const continuationItems = showContinuation
+    ? getLearningItemsForDay(
+        subProgram.masechetIds,
+        subProgram.unit,
+        subProgram.currentPosition,
+        1,
+        subProgram.preLearnedChapters as any,
+      )
+    : [];
+
+  const unitLabel = getUnitLabel(subProgram.contentType || 'mishnah', subProgram.unit);
+  const preLearnedCount = getPreLearnedUnitsCount(subProgram);
+  const remainingAfterToday = Math.max(0, subProgram.totalUnits - subProgram.currentPosition - preLearnedCount);
+
   return (
     <div className="space-y-4">
       {showCelebration && (
@@ -214,14 +198,20 @@ export default function LearningPage() {
             <h2 className="text-xl font-bold text-gray-800">כל הכבוד!</h2>
             <p className="text-gray-600">הלימוד היומי הושלם בהצלחה</p>
 
+            {remainingAfterToday > 0 && (
+              <div className="bg-parchment-50 rounded-xl px-4 py-2 text-sm text-primary-700">
+                נותרו עוד <span className="font-bold">{remainingAfterToday}</span> {unitLabel} לסיום התוכנית
+              </div>
+            )}
+
             <div className="space-y-3 pt-2">
-              {continueInfo && (
+              {!subProgram.isCompleted && (
                 <button
-                  onClick={handleContinueFreeLearning}
+                  onClick={handleStartContinuation}
                   className="w-full btn-primary flex items-center justify-center gap-2 py-3"
                 >
                   <BookOpen className="w-5 h-5" />
-                  המשך לימוד חופשי
+                  המשך ללמוד עוד
                 </button>
               )}
               <button
@@ -232,6 +222,71 @@ export default function LearningPage() {
                 חזרה לתוכנית
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showContinuation && (
+        <div className="fixed inset-0 bg-white z-50 flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b border-parchment-200">
+            <button
+              onClick={() => { setShowContinuation(false); navigate(`/plan/${plan.id}`); }}
+              className="flex items-center gap-1 text-primary-600 hover:text-primary-800"
+            >
+              <ArrowRight className="w-4 h-4" />
+              סיום
+            </button>
+            <div className="text-sm text-gray-500">
+              {remainingAfterToday > 0
+                ? `נותרו ${remainingAfterToday} ${unitLabel}`
+                : 'סיום התוכנית!'}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {continuationItems.length === 0 ? (
+              <div className="text-center py-16 space-y-4">
+                <div className="text-5xl">🎉</div>
+                <p className="text-xl font-bold text-primary-800">הדרן עלך!</p>
+                <p className="text-gray-500">סיימת את כל התוכנית</p>
+                <button
+                  onClick={() => { setShowContinuation(false); navigate(`/plan/${plan.id}`); }}
+                  className="btn-primary mt-4"
+                >
+                  חזרה לתוכנית
+                </button>
+              </div>
+            ) : (
+              <>
+                <MishnahTextDisplay
+                  sefariaRef={`${continuationItems[0].sefariaName} ${continuationItems[0].chapter}`}
+                  sefariaName={continuationItems[0].sefariaName}
+                  chapter={continuationItems[0].chapter}
+                  fromMishnah={continuationItems[0].fromMishnah}
+                  toMishnah={continuationItems[0].toMishnah}
+                  masechetName={continuationItems[0].masechetName}
+                  contentType={subProgram.contentType || 'mishnah'}
+                  masechetId={continuationItems[0].masechetId}
+                />
+
+                <div className="flex gap-3 pt-2 border-t border-parchment-200">
+                  <button
+                    onClick={() => { setShowContinuation(false); navigate(`/plan/${plan.id}`); }}
+                    className="btn-secondary flex items-center gap-2 flex-1"
+                  >
+                    <Square className="w-4 h-4" />
+                    עצור
+                  </button>
+                  <button
+                    onClick={handleContinuationMark}
+                    className="btn-primary flex items-center gap-2 flex-1 bg-success hover:bg-green-700"
+                  >
+                    <Check className="w-5 h-5" />
+                    סמן כנלמד והמשך
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

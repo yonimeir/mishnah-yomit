@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpen, Clock, ArrowRight, Check, Library, BookMarked, ScrollText, Scale, Bell } from 'lucide-react';
+import { BookOpen, Clock, ArrowRight, Check, Library, BookMarked, ScrollText, Scale, Bell, Calculator } from 'lucide-react';
+import { HDate, months } from '@hebcal/core';
 import {
   getTotalMishnayot,
   getMultiMasechetTotalUnits,
@@ -20,13 +21,44 @@ import {
 } from '../services/scheduler';
 import type { FrequencyType, ScheduleFrequency } from '../services/scheduler';
 import { usePlanStore, generateId, type LearningPlan } from '../store/usePlanStore';
-import HebrewDatePicker from '../components/HebrewDatePicker';
+import HebrewDatePicker, { formatHebrewDate } from '../components/HebrewDatePicker';
 import { requestNotificationPermission } from '../services/notifications';
 
 type Step = 'content_type' | 'mode' | 'scope' | 'masechet' | 'settings';
 type SelectionScope = 'single' | 'multiple' | 'seder' | 'shas';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+
+function calculateBarMitzvahDate(birthDateIso: string): {
+  isoDate: string; hebrewDisplay: string; gregorianDisplay: string;
+} | null {
+  if (!birthDateIso) return null;
+  try {
+    const birth = new Date(birthDateIso + 'T12:00:00');
+    const hBirth = new HDate(birth);
+    const birthMonth = hBirth.getMonth();
+    const birthDay = hBirth.getDate();
+    const barYear = hBirth.getFullYear() + 13;
+    const birthYearIsLeap = HDate.isLeapYear(hBirth.getFullYear());
+    const barYearIsLeap = HDate.isLeapYear(barYear);
+
+    let barMonth = birthMonth;
+    if (birthMonth === months.ADAR_II && !barYearIsLeap) {
+      barMonth = months.ADAR_I;
+    } else if (birthMonth === months.ADAR_I && !birthYearIsLeap && barYearIsLeap) {
+      barMonth = months.ADAR_II;
+    }
+
+    const barHDate = new HDate(birthDay, barMonth, barYear);
+    const barGreg = barHDate.greg();
+    const isoDate = `${barGreg.getFullYear()}-${String(barGreg.getMonth() + 1).padStart(2, '0')}-${String(barGreg.getDate()).padStart(2, '0')}`;
+    const hebrewDisplay = formatHebrewDate(isoDate);
+    const gregorianDisplay = barGreg.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
+    return { isoDate, hebrewDisplay, gregorianDisplay };
+  } catch {
+    return null;
+  }
+}
 
 export default function NewPlanPage() {
   const { planId } = useParams<{ planId?: string }>();
@@ -49,6 +81,11 @@ export default function NewPlanPage() {
   const [distributionStrategy, setDistributionStrategy] = useState<'even' | 'tapered'>('tapered');
   const [isReminderEnabled, setIsReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('08:30');
+
+  // Bar Mitzvah calculator
+  const [showBarMitzvah, setShowBarMitzvah] = useState(false);
+  const [bmBirthDate, setBmBirthDate] = useState('');
+  const bmResult = useMemo(() => calculateBarMitzvahDate(bmBirthDate), [bmBirthDate]);
 
   const frequency: ScheduleFrequency = {
     type: freqType,
@@ -479,8 +516,43 @@ export default function NewPlanPage() {
 
           {/* Target date (by_book mode) */}
           {mode === 'by_book' && (
-            <div className="card">
-              <label className="block font-bold text-primary-700 mb-2">תאריך יעד לסיום</label>
+            <div className="card space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block font-bold text-primary-700">תאריך יעד לסיום</label>
+                <button
+                  onClick={() => setShowBarMitzvah(v => !v)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold transition-all ${showBarMitzvah ? 'bg-primary-700 text-white' : 'bg-parchment-200 text-primary-700 hover:bg-parchment-300'}`}
+                >
+                  <Calculator className="w-4 h-4" />
+                  מחשבון בר מצווה
+                </button>
+              </div>
+
+                {showBarMitzvah && (
+                <div className="bg-parchment-50 rounded-xl p-4 space-y-3 border border-parchment-200">
+                  <p className="text-sm text-gray-600 font-bold">הכנס תאריך לידה:</p>
+                  <HebrewDatePicker
+                    value={bmBirthDate}
+                    onChange={setBmBirthDate}
+                    maxDate={new Date().toISOString().split('T')[0]}
+                  />
+                  {bmResult && (
+                    <div className="bg-primary-50 rounded-xl p-3 space-y-2 border border-primary-200">
+                      <p className="text-xs text-gray-500">תאריך בר מצווה:</p>
+                      <p className="font-bold text-primary-800 text-lg text-right">{bmResult.hebrewDisplay}</p>
+                      <p className="text-sm text-gray-600 text-right">{bmResult.gregorianDisplay}</p>
+                      <button
+                        onClick={() => { setTargetDate(bmResult.isoDate); setShowBarMitzvah(false); }}
+                        className="btn-primary w-full text-sm flex items-center justify-center gap-2 mt-1"
+                      >
+                        <Check className="w-4 h-4" />
+                        קבע כתאריך יעד
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <HebrewDatePicker
                 value={targetDate}
                 onChange={setTargetDate}

@@ -60,20 +60,19 @@ export function startNotificationCheck() {
         const todayStr = now.toDateString();
 
         plans.forEach(plan => {
-            if (plan.reminderTime === timeString) {
-                const storageKey = `notif_sent_${plan.id}_${todayStr}`;
-                // Avoid firing multiple times in the same minute or if already fired today
-                if (!localStorage.getItem(storageKey)) {
-                    // Send notification
-                    new Notification('הגיע הזמן ללמוד!', {
-                        body: `תזכורת הלימוד שלך עבור ${plan.planName} מחכה לך.`,
-                        icon: '/vite.svg',
-                        tag: plan.id, // prevents duplicates
-                    });
-
-                    localStorage.setItem(storageKey, 'true');
+            plan.subPrograms?.forEach(sp => {
+                if (sp.reminderTime === timeString) {
+                    const storageKey = `notif_sent_${plan.id}_${sp.id}_${todayStr}`;
+                    if (!localStorage.getItem(storageKey)) {
+                        new Notification('הגיע הזמן ללמוד!', {
+                            body: `תזכורת הלימוד שלך עבור ${plan.planName} מחכה לך.`,
+                            icon: '/vite.svg',
+                            tag: `${plan.id}_${sp.id}`,
+                        });
+                        localStorage.setItem(storageKey, 'true');
+                    }
                 }
-            }
+            });
         });
     }, 60000); // 1 minute
 }

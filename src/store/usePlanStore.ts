@@ -60,12 +60,15 @@ export interface LearningPlan {
 interface PlanStore {
   plans: LearningPlan[];
   activePlanId: string | null;
+  streak: number;
+  lastStreakDate: string | null;
 
   addPlan: (plan: LearningPlan) => void;
   removePlan: (planId: string) => void;
   setActivePlan: (planId: string | null) => void;
 
   markDayComplete: (planId: string, subProgramId: string, date: string, unitsCompleted: number) => void;
+  advancePositionBy: (planId: string, subProgramId: string, units: number) => void;
   updatePosition: (planId: string, subProgramId: string, newPosition: number) => void;
   jumpPosition: (planId: string, subProgramId: string, newPosition: number, newAmountPerDay?: number, newSkippedChapters?: SkippedChapter[]) => void;
   toggleSkippedChapter: (planId: string, subProgramId: string, masechetId: string, chapter: number) => void;
@@ -91,6 +94,8 @@ export const usePlanStore = create<PlanStore>()(
     (set) => ({
       plans: [],
       activePlanId: null,
+      streak: 0,
+      lastStreakDate: null,
 
       addPlan: (plan) =>
         set((state) => {
@@ -116,7 +121,23 @@ export const usePlanStore = create<PlanStore>()(
         set({ activePlanId: planId }),
 
       markDayComplete: (planId, subProgramId, date, unitsCompleted) =>
-        set((state) => ({
+        set((state) => {
+          // Update streak
+          const yesterday = new Date(date + 'T12:00:00');
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().split('T')[0];
+          let newStreak = state.streak || 0;
+          if (state.lastStreakDate === date) {
+            // Same day already counted, no change
+          } else if (!state.lastStreakDate || state.lastStreakDate < yesterdayStr) {
+            newStreak = 1; // Broken or first time
+          } else if (state.lastStreakDate === yesterdayStr) {
+            newStreak = (state.streak || 0) + 1; // Consecutive!
+          }
+
+          return {
+          streak: newStreak,
+          lastStreakDate: date,
           plans: state.plans.map((p) => {
             if (p.id !== planId) return p;
             return {
@@ -148,6 +169,36 @@ export const usePlanStore = create<PlanStore>()(
                   preLearnedChapters: remainingPreLearned,
                 };
               })
+            };
+          }),
+          };
+        }),
+
+      advancePositionBy: (planId, subProgramId, units) =>
+        set((state) => ({
+          plans: state.plans.map((p) => {
+            if (p.id !== planId) return p;
+            return {
+              ...p,
+              subPrograms: p.subPrograms.map((sp) => {
+                if (sp.id !== subProgramId) return sp;
+                let newPosition = sp.currentPosition + units;
+                const preLearnedChapters = sp.preLearnedChapters || [];
+                const { pos, consumed } = skipPreLearnedFromPosition(
+                  sp.masechetIds, sp.unit, newPosition, preLearnedChapters
+                );
+                newPosition = pos;
+                const remainingPreLearned = preLearnedChapters.filter(
+                  pl => !consumed.some(c => c.masechetId === pl.masechetId && c.chapter === pl.chapter)
+                );
+                const isCompleted = newPosition >= sp.totalUnits;
+                return {
+                  ...sp,
+                  currentPosition: Math.min(newPosition, sp.totalUnits),
+                  isCompleted,
+                  preLearnedChapters: remainingPreLearned,
+                };
+              }),
             };
           }),
         })),
@@ -488,6 +539,8 @@ export const usePlanStore = create<PlanStore>()(
         return {
           ...currentState,
           ...persisted,
+          streak: persisted?.streak || 0,
+          lastStreakDate: persisted?.lastStreakDate || null,
           plans: (persisted?.plans || []).map((p: any) => {
             if (!p.subPrograms) {
               const sp: SubProgram = {
@@ -542,7 +595,7 @@ export function generateId(): string {
 
 // ── Imports for helpers ──
 
-import { getMasechet, getMasechetUnits, getMultiMasechetTotalUnits, getPlanDisplayName } from '../data/mishnah-structure';
+import { getMasechet, getMasechetUnits, getMultiMasechetTotalUnits } from '../data/mishnah-structure';
 
 function scheduleRemindersForPlans(plans: LearningPlan[]) {
   // Pass plans to notifications; notifications service should probably be updated too

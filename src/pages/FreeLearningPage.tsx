@@ -57,7 +57,7 @@ export default function FreeLearningPage() {
   }, [navState, location.pathname, navigate]);
 
   const { plans, addPreLearnedChapters } = usePlanStore();
-  const activePlans = plans.filter(p => !p.isCompleted);
+  const activePlans = plans.filter(p => p.subPrograms.some(sp => !sp.isCompleted));
 
   const structure = useMemo(() => getStructureForType(contentType), [contentType]);
   const labels = useMemo(() => getContentTypeLabels(contentType), [contentType]);
@@ -65,16 +65,20 @@ export default function FreeLearningPage() {
 
   const relevantPlans = useMemo(() => {
     if (!selectedMasechet) return [];
-    return activePlans.filter(p => p.masechetIds.includes(selectedMasechet.id));
+    return activePlans.filter(p =>
+      p.subPrograms.some(sp => !sp.isCompleted && sp.masechetIds.includes(selectedMasechet.id))
+    );
   }, [activePlans, selectedMasechet]);
 
   const isChapterLearnedInAnyPlan = (masechetId: string, chapter: number) =>
     activePlans.some(p =>
-      p.masechetIds.includes(masechetId) && isChapterPreLearned(p, masechetId, chapter)
+      p.subPrograms.some(sp =>
+        sp.masechetIds.includes(masechetId) && isChapterPreLearned(sp, masechetId, chapter)
+      )
     );
 
   const isChapterLearnedInPlan = (plan: LearningPlan, masechetId: string, chapter: number) =>
-    isChapterPreLearned(plan, masechetId, chapter);
+    plan.subPrograms.some(sp => isChapterPreLearned(sp, masechetId, chapter));
 
   const togglePlanSelection = (planId: string) => {
     setSelectedPlanIds(prev => {
@@ -95,8 +99,10 @@ export default function FreeLearningPage() {
       : relevantPlans;
 
     for (const plan of plansToMark) {
-      if (!isChapterPreLearned(plan, masechet.id, chapter)) {
-        addPreLearnedChapters(plan.id, [{ masechetId: masechet.id, chapter }]);
+      for (const sp of plan.subPrograms) {
+        if (!sp.isCompleted && sp.masechetIds.includes(masechet.id) && !isChapterPreLearned(sp, masechet.id, chapter)) {
+          addPreLearnedChapters(plan.id, sp.id, [{ masechetId: masechet.id, chapter }]);
+        }
       }
     }
     setShowPlanPicker(false);
