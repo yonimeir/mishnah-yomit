@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mishnah-yomit-v1';
+const CACHE_NAME = 'mishnah-yomit-v2';
 const SEFARIA_CACHE = 'mishnah-sefaria-v1';
 
 // App shell to cache
