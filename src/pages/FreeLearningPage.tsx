@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, Check, ChevronDown, ChevronUp, BookOpen, ScrollText, Scale } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, ChevronUp, BookOpen, ScrollText, Scale, BookCopy } from 'lucide-react';
 import {
   type Masechet,
   type ContentType,
@@ -8,6 +8,7 @@ import {
   getSederForMasechet,
   getStructureForType,
   getContentTypeLabels,
+  getUnitLabel,
   getGemaraDafRef,
   dafToDisplay,
 } from '../data/mishnah-structure';
@@ -138,6 +139,25 @@ export default function FreeLearningPage() {
     else if (view === 'sedarim') setView('types');
   };
 
+  // Collect all sub-programs with pending catch-up units
+  const catchUpItems = useMemo(() => {
+    const items: { plan: LearningPlan; subProgramId: string; subProgramName: string; units: number; unitLabel: string }[] = [];
+    for (const plan of activePlans) {
+      for (const sp of plan.subPrograms) {
+        if (!sp.isCompleted && (sp.catchUpUnits || 0) > 0) {
+          items.push({
+            plan,
+            subProgramId: sp.id,
+            subProgramName: sp.name || plan.planName,
+            units: sp.catchUpUnits!,
+            unitLabel: getUnitLabel(sp.contentType || 'mishnah', sp.unit),
+          });
+        }
+      }
+    }
+    return items;
+  }, [activePlans]);
+
   return (
     <div className="space-y-4">
       {view !== 'types' && (
@@ -145,6 +165,32 @@ export default function FreeLearningPage() {
           <ArrowRight className="w-4 h-4" />
           חזרה
         </button>
+      )}
+
+      {/* Catch-up banner — shown on the types/home view only */}
+      {view === 'types' && catchUpItems.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-bold text-blue-700 flex items-center gap-1.5">
+            <BookCopy className="w-4 h-4" />
+            השלמות פתוחות
+          </h3>
+          {catchUpItems.map(item => (
+            <button
+              key={`${item.plan.id}-${item.subProgramId}`}
+              onClick={() => navigate(`/catchup/${item.plan.id}/${item.subProgramId}`)}
+              className="w-full flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 hover:bg-blue-100 transition-colors"
+            >
+              <span className="text-xs text-blue-600 font-bold bg-blue-100 px-2 py-0.5 rounded-full">
+                {item.units} {item.unitLabel}
+              </span>
+              <div className="text-right">
+                <p className="font-bold text-blue-800 text-sm">{item.subProgramName}</p>
+                <p className="text-xs text-blue-500">{item.plan.planName !== item.subProgramName ? item.plan.planName : 'לחץ להתחיל השלמה'}</p>
+              </div>
+            </button>
+          ))}
+          <div className="border-t border-parchment-200 pt-2" />
+        </div>
       )}
 
       {/* Content type selection */}

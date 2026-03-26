@@ -5,6 +5,7 @@ import NewPlanPage from './pages/NewPlanPage';
 import PlanDetailPage from './pages/PlanDetailPage';
 import LearningPage from './pages/LearningPage';
 import FreeLearningPage from './pages/FreeLearningPage';
+import CatchUpPage from './pages/CatchUpPage';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="/plan/:planId" element={<PlanDetailPage />} />
           <Route path="/plan/:planId/add-subprogram" element={<NewPlanPage />} />
           <Route path="/learn/:planId/:subProgramId?" element={<LearningPage />} />
+          <Route path="/catchup/:planId/:subProgramId" element={<CatchUpPage />} />
           <Route path="/free" element={<FreeLearningPage />} />
         </Route>
       </Routes>

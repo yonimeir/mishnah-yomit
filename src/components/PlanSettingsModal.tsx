@@ -2,9 +2,10 @@ import { useState, useMemo } from 'react';
 import { X, Plus, Minus, ChevronUp, ChevronDown, Trash2, Bell } from 'lucide-react';
 import { requestNotificationPermission } from '../services/notifications';
 import {
-  MISHNAH_STRUCTURE,
   getMasechet,
-  getTotalMishnayot,
+  getStructureForType,
+  getContentTypeLabels,
+  getMasechetUnits,
 } from '../data/mishnah-structure';
 import type { DistributionInfo } from '../services/scheduler';
 import { usePlanStore, type LearningPlan, type SubProgram } from '../store/usePlanStore';
@@ -269,122 +270,66 @@ function MasechtotSettings({
     setHasReordered(false);
   };
 
+  const structure = getStructureForType(subProgram.contentType || 'mishnah');
+  const ctLabels = getContentTypeLabels(subProgram.contentType || 'mishnah');
+
   return (
     <div className="space-y-4">
-      {/* Current masechtot list with reorder controls */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => setShowAddPicker(!showAddPicker)}
-            className="text-sm text-primary-600 hover:text-primary-800 flex items-center gap-1"
-          >
-            <Plus className="w-4 h-4" />
-            הוסף מסכת
-          </button>
-          <h3 className="font-bold text-primary-700 text-sm">
-            מסכתות בתוכנית ({order.length})
-          </h3>
-        </div>
-
-        <div className="space-y-1.5">
-          {order.map((id, idx) => {
-            const m = getMasechet(id);
-            if (!m) return null;
-            const isCompleted = completedMasechtot.has(id);
-            const units = subProgram.unit === 'mishnah'
-              ? m.chapters.reduce((s, c) => s + c, 0)
-              : m.chapters.length;
-
-            return (
-              <div
-                key={id}
-                className={`flex items-center gap-2 py-2 px-3 rounded-xl transition-all ${isCompleted ? 'bg-green-50 opacity-60' : 'bg-parchment-50'
-                  }`}
-              >
-                {/* Move buttons */}
-                <div className="flex flex-col gap-0.5">
-                  <button
-                    onClick={() => moveUp(idx)}
-                    disabled={idx === 0 || isCompleted || completedMasechtot.has(order[idx - 1])}
-                    className="p-0.5 rounded hover:bg-parchment-200 disabled:opacity-20"
-                  >
-                    <ChevronUp className="w-3.5 h-3.5 text-gray-500" />
-                  </button>
-                  <button
-                    onClick={() => moveDown(idx)}
-                    disabled={idx === order.length - 1 || isCompleted}
-                    className="p-0.5 rounded hover:bg-parchment-200 disabled:opacity-20"
-                  >
-                    <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
-                  </button>
-                </div>
-
-                {/* Position number */}
-                <span className="w-6 h-6 rounded-full bg-parchment-200 flex items-center justify-center text-xs font-bold text-gray-500">
-                  {idx + 1}
-                </span>
-
-                {/* Name */}
-                <div className="flex-1 text-right">
-                  <span className="font-bold text-primary-800 text-sm">{m.name}</span>
-                  <span className="text-xs text-gray-400 mr-2">
-                    {units} {subProgram.unit === 'mishnah' ? 'משניות' : 'פרקים'}
-                  </span>
-                  {isCompleted && <span className="text-xs text-success mr-1">✓</span>}
-                </div>
-
-                {/* Remove */}
-                {!isCompleted && order.length > 1 && (
-                  <button
-                    onClick={() => removeMasechet(id)}
-                    className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-danger transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {hasReordered && (
-          <button
-            onClick={handleSaveOrder}
-            className="btn-primary w-full mt-3 text-sm"
-          >
-            שמור סדר חדש
-          </button>
-        )}
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setShowAddPicker(!showAddPicker)}
+          className={`text-sm flex items-center gap-1 font-bold px-3 py-1.5 rounded-xl transition-all ${
+            showAddPicker
+              ? 'bg-primary-700 text-white'
+              : 'bg-primary-100 text-primary-700 hover:bg-primary-200'
+          }`}
+        >
+          <Plus className="w-4 h-4" />
+          הוסף {ctLabels.bookSingular}
+        </button>
+        <h3 className="font-bold text-primary-700 text-sm">
+          מסכתות בתוכנית ({order.length})
+        </h3>
       </div>
 
-      {/* Add masechet picker */}
+      {/* Add masechet picker — shown ABOVE the list */}
       {showAddPicker && (
-        <div className="card border-primary-200">
-          <h4 className="font-bold text-primary-700 text-sm mb-3 text-center">הוסף מסכתות</h4>
-          <div className="max-h-60 overflow-y-auto space-y-1">
-            {MISHNAH_STRUCTURE.map((seder) => {
+        <div className="card border-primary-300 bg-primary-50">
+          <h4 className="font-bold text-primary-700 text-sm mb-3 text-center">
+            בחר {ctLabels.bookPlural} להוספה
+          </h4>
+          <div className="max-h-56 overflow-y-auto space-y-1">
+            {structure.map((seder) => {
               const availableMasechtot = seder.masechtot.filter(
                 m => !order.includes(m.id)
               );
               if (availableMasechtot.length === 0) return null;
               return (
                 <div key={seder.id}>
-                  <p className="text-xs font-bold text-primary-500 mb-1">סדר {seder.name}</p>
+                  <p className="text-xs font-bold text-primary-500 mb-1 px-1">
+                    {ctLabels.orderSingular} {seder.name}
+                  </p>
                   {availableMasechtot.map(m => {
                     const isSelected = selectedToAdd.includes(m.id);
+                    const units = getMasechetUnits(m, subProgram.unit);
+                    const unitLabel = subProgram.unit === 'mishnah'
+                      ? ctLabels.unitPlural
+                      : ctLabels.chapterPlural;
                     return (
                       <button
                         key={m.id}
                         onClick={() => toggleAddMasechet(m.id)}
-                        className={`w-full flex items-center justify-between py-1.5 px-3 rounded-lg text-sm transition-all ${isSelected
-                          ? 'bg-primary-100 text-primary-800'
-                          : 'hover:bg-parchment-100 text-gray-700'
-                          }`}
+                        className={`w-full flex items-center justify-between py-1.5 px-3 rounded-lg text-sm transition-all ${
+                          isSelected
+                            ? 'bg-primary-600 text-white'
+                            : 'hover:bg-primary-100 text-gray-700'
+                        }`}
                       >
-                        <span className="text-xs text-gray-400">
-                          {getTotalMishnayot(m)} משניות
+                        <span className={`text-xs ${isSelected ? 'text-primary-200' : 'text-gray-400'}`}>
+                          {units} {unitLabel}
                         </span>
-                        <span className={`font-bold ${isSelected ? 'text-primary-700' : ''}`}>
+                        <span className="font-bold">
                           {isSelected && '✓ '}{m.name}
                         </span>
                       </button>
@@ -395,15 +340,97 @@ function MasechtotSettings({
             })}
           </div>
 
-          {selectedToAdd.length > 0 && (
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={() => { setShowAddPicker(false); setSelectedToAdd([]); }}
+              className="flex-1 py-2 rounded-xl bg-parchment-200 text-gray-600 text-sm font-bold hover:bg-parchment-300 transition-colors"
+            >
+              ביטול
+            </button>
             <button
               onClick={handleAddSelected}
-              className="btn-primary w-full mt-3 text-sm"
+              disabled={selectedToAdd.length === 0}
+              className="flex-1 btn-primary text-sm disabled:opacity-40"
             >
-              הוסף {selectedToAdd.length} מסכתות
+              {selectedToAdd.length > 0
+                ? `הוסף ${selectedToAdd.length} ${ctLabels.bookPlural}`
+                : `בחר ${ctLabels.bookPlural}`}
             </button>
-          )}
+          </div>
         </div>
+      )}
+
+      {/* Current masechtot list */}
+      <div className="space-y-1.5">
+        {order.map((id, idx) => {
+          const m = getMasechet(id);
+          if (!m) return null;
+          const isCompleted = completedMasechtot.has(id);
+          const units = getMasechetUnits(m, subProgram.unit);
+          const unitLabel = subProgram.unit === 'mishnah'
+            ? ctLabels.unitPlural
+            : ctLabels.chapterPlural;
+
+          return (
+            <div
+              key={id}
+              className={`flex items-center gap-2 py-2 px-3 rounded-xl transition-all ${
+                isCompleted ? 'bg-green-50 opacity-60' : 'bg-parchment-50'
+              }`}
+            >
+              {/* Move buttons */}
+              <div className="flex flex-col gap-0.5">
+                <button
+                  onClick={() => moveUp(idx)}
+                  disabled={idx === 0 || isCompleted || completedMasechtot.has(order[idx - 1])}
+                  className="p-0.5 rounded hover:bg-parchment-200 disabled:opacity-20"
+                >
+                  <ChevronUp className="w-3.5 h-3.5 text-gray-500" />
+                </button>
+                <button
+                  onClick={() => moveDown(idx)}
+                  disabled={idx === order.length - 1 || isCompleted}
+                  className="p-0.5 rounded hover:bg-parchment-200 disabled:opacity-20"
+                >
+                  <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Position number */}
+              <span className="w-6 h-6 rounded-full bg-parchment-200 flex items-center justify-center text-xs font-bold text-gray-500">
+                {idx + 1}
+              </span>
+
+              {/* Name */}
+              <div className="flex-1 text-right">
+                <span className="font-bold text-primary-800 text-sm">{m.name}</span>
+                <span className="text-xs text-gray-400 mr-2">
+                  {units} {unitLabel}
+                </span>
+                {isCompleted && <span className="text-xs text-success mr-1">✓</span>}
+              </div>
+
+              {/* Remove */}
+              {!isCompleted && order.length > 1 && (
+                <button
+                  onClick={() => removeMasechet(id)}
+                  className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-danger transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {hasReordered && (
+        <button
+          onClick={handleSaveOrder}
+          className="btn-primary w-full text-sm"
+        >
+          שמור סדר חדש
+        </button>
       )}
 
       {/* Tip */}

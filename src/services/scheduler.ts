@@ -264,6 +264,52 @@ export function getLearningItemsForDay(
   return items;
 }
 
+/**
+ * Count how many scheduled learning days were missed between the last learning date and yesterday.
+ * Returns 0 if the user learned yesterday, today, or has never learned.
+ */
+export function getMissedLearningDays(
+  lastLearningDate: string | undefined,
+  today: string,
+  frequency: ScheduleFrequency,
+): number {
+  if (!lastLearningDate) return 0;
+
+  const lastDate = new Date(lastLearningDate + 'T12:00:00');
+  const todayDate = new Date(today + 'T12:00:00');
+  const yesterday = new Date(todayDate);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  // Learned today or yesterday — nothing missed
+  if (lastDate >= yesterday) return 0;
+
+  // Count scheduled learning days from (lastLearningDate + 1) to yesterday
+  const startDate = new Date(lastDate);
+  startDate.setDate(startDate.getDate() + 1);
+  return countLearningDays(startDate, yesterday, frequency);
+}
+
+/**
+ * For a by_book plan: calculate the new required daily pace to still meet the target date,
+ * given the current position (after having missed some days).
+ */
+export function calcCatchUpPace(
+  remainingUnits: number,
+  targetDate: string,
+  frequency: ScheduleFrequency,
+): number {
+  const today = new Date();
+  const endDate = new Date(targetDate + 'T12:00:00');
+  if (endDate <= today) return remainingUnits; // Target already passed
+
+  const learningDays = countLearningDays(today, endDate, frequency);
+  const reviewDays = frequency.reviewEvery
+    ? Math.floor(learningDays / (frequency.reviewEvery + 1))
+    : 0;
+  const actual = Math.max(learningDays - reviewDays, 1);
+  return Math.ceil(remainingUnits / actual);
+}
+
 export function getTodaySubPrograms(plan: LearningPlan): { subProgram: SubProgram; items: LearningItem[] }[] {
   const today = new Date();
   const results: { subProgram: SubProgram; items: LearningItem[] }[] = [];

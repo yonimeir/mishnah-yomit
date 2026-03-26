@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BookOpen, Trash2, RotateCcw, Play, CheckCheck, AlertTriangle, Settings, Plus } from 'lucide-react';
 import { usePlanStore, getSkippedUnitsCount, getPreLearnedUnitsCount, type SubProgram, type LearningPlan } from '../store/usePlanStore';
 import { globalToLocal, indexToRef, getUnitLabel, getContentTypeLabels, getMasechet, formatGemaraPoint, formatGemaraItem } from '../data/mishnah-structure';
-import { gematriya, getLearningItemsForDay, getAmountForPosition } from '../services/scheduler';
+import { gematriya, getLearningItemsForDay, getAmountForPosition, getMissedLearningDays } from '../services/scheduler';
 import ProgressTable from '../components/ProgressTable';
 import AlreadyLearnedModal from '../components/AlreadyLearnedModal';
 import PlanSettingsModal from '../components/PlanSettingsModal';
+import MissedDaysModal from '../components/MissedDaysModal';
 
 export default function PlanDetailPage() {
   const { planId } = useParams<{ planId: string }>();
@@ -67,6 +68,20 @@ export default function PlanDetailPage() {
 function SubProgramSection({ plan, subProgram }: { plan: LearningPlan, subProgram: SubProgram }) {
   const navigate = useNavigate();
   const { resetSubProgram, removeSubProgram } = usePlanStore();
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const missedDays = useMemo(
+    () => getMissedLearningDays(subProgram.lastLearningDate, today, subProgram.frequency),
+    [subProgram.lastLearningDate, today, subProgram.frequency]
+  );
+
+  const showMissedModal =
+    !subProgram.isCompleted &&
+    missedDays > 0 &&
+    subProgram.missedDaysAcknowledgedDate !== today;
+
+  const [missedModalDismissed, setMissedModalDismissed] = useState(false);
 
   const [showAlreadyLearned, setShowAlreadyLearned] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -307,6 +322,16 @@ function SubProgramSection({ plan, subProgram }: { plan: LearningPlan, subProgra
           plan={plan}
           subProgram={subProgram}
           onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {/* Missed days modal */}
+      {showMissedModal && !missedModalDismissed && (
+        <MissedDaysModal
+          plan={plan}
+          subProgram={subProgram}
+          today={today}
+          onClose={() => setMissedModalDismissed(true)}
         />
       )}
 

@@ -43,6 +43,12 @@ export interface SubProgram {
   lastLearningDate?: string;
   isCompleted: boolean;
 
+  // Missed-days acknowledgement (suppress the modal for the rest of the day)
+  missedDaysAcknowledgedDate?: string;
+
+  // Accumulated catch-up units (units the user chose to make up later)
+  catchUpUnits?: number;
+
   // Holes - chapters BEHIND currentPosition that weren't learned
   skippedChapters: SkippedChapter[];
 
@@ -82,9 +88,89 @@ interface PlanStore {
   updateReminderTime: (planId: string, subProgramId: string, time?: string) => void;
   resetPlan: (planId: string) => void;
   resetSubProgram: (planId: string, subProgramId: string) => void;
+  acknowledgeMissedDays: (planId: string, subProgramId: string, date: string) => void;
+  addCatchUpUnits: (planId: string, subProgramId: string, units: number, acknowledgeDate: string) => void;
+  reduceCatchUpUnits: (planId: string, subProgramId: string, units: number) => void;
+  skipAheadUnits: (planId: string, subProgramId: string, units: number, today: string) => void;
 
-  // SubProgram exclusive actions
-  addSubProgramToPlan: (planId: string, subProgram: SubProgram) => void;
+      acknowledgeMissedDays: (planId, subProgramId, date) =>
+        set((state) => ({
+          plans: state.plans.map((p) =>
+            p.id === planId
+              ? {
+                ...p,
+                subPrograms: p.subPrograms.map((sp) =>
+                  sp.id === subProgramId
+                    ? { ...sp, missedDaysAcknowledgedDate: date }
+                    : sp
+                ),
+              }
+              : p
+          ),
+        })),
+
+      addCatchUpUnits: (planId, subProgramId, units, acknowledgeDate) =>
+        set((state) => ({
+          plans: state.plans.map((p) =>
+            p.id === planId
+              ? {
+                ...p,
+                subPrograms: p.subPrograms.map((sp) =>
+                  sp.id === subProgramId
+                    ? {
+                      ...sp,
+                      catchUpUnits: (sp.catchUpUnits || 0) + units,
+                      // Mark last learning date as today so missed-days counter resets
+                      lastLearningDate: acknowledgeDate,
+                      missedDaysAcknowledgedDate: acknowledgeDate,
+                    }
+                    : sp
+                ),
+              }
+              : p
+          ),
+        })),
+
+      reduceCatchUpUnits: (planId, subProgramId, units) =>
+        set((state) => ({
+          plans: state.plans.map((p) =>
+            p.id === planId
+              ? {
+                ...p,
+                subPrograms: p.subPrograms.map((sp) =>
+                  sp.id === subProgramId
+                    ? { ...sp, catchUpUnits: Math.max(0, (sp.catchUpUnits || 0) - units) }
+                    : sp
+                ),
+              }
+              : p
+          ),
+        })),
+
+      skipAheadUnits: (planId, subProgramId, units, today) =>
+        set((state) => ({
+          plans: state.plans.map((p) => {
+            if (p.id !== planId) return p;
+            return {
+              ...p,
+              subPrograms: p.subPrograms.map((sp) => {
+                if (sp.id !== subProgramId) return sp;
+                const newPosition = Math.min(sp.currentPosition + units, sp.totalUnits);
+                return {
+                  ...sp,
+                  currentPosition: newPosition,
+                  isCompleted: newPosition >= sp.totalUnits,
+                  // Update last learning date so missed-days counter resets from today
+                  lastLearningDate: today,
+                  missedDaysAcknowledgedDate: today,
+                };
+              }),
+            };
+          }),
+        })),
+
+      // SubProgram exclusive actions
+      addSubProgramToPlan: (planId: string, subProgram: SubProgram) => void;
   removeSubProgram: (planId: string, subProgramId: string) => void;
   extractMasechetToSubProgram: (planId: string, sourceSubProgramId: string, masechetId: string, newSubProgramDetails: Partial<SubProgram>) => void;
 }

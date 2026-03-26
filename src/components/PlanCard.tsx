@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Calendar, Trophy, ChevronLeft } from 'lucide-react';
+import { BookOpen, Calendar, Trophy, ChevronLeft, AlertTriangle } from 'lucide-react';
 import { type LearningPlan, getSkippedUnitsCount, getPreLearnedUnitsCount } from '../store/usePlanStore';
-import { getAmountForPosition } from '../services/scheduler';
+import { getAmountForPosition, getMissedLearningDays } from '../services/scheduler';
 import { getUnitLabel, getContentTypeLabels } from '../data/mishnah-structure';
 
 interface PlanCardProps {
@@ -17,8 +17,10 @@ export default function PlanCard({ plan }: PlanCardProps) {
   let preLearnedCount = 0;
   let todayAmount = 0;
   let isCompleted = true;
+  let totalMissedDays = 0;
 
   const masechetIds = new Set<string>();
+  const today = new Date().toISOString().split('T')[0];
 
   plan.subPrograms.forEach(sp => {
     currentPosition += sp.currentPosition;
@@ -28,6 +30,9 @@ export default function PlanCard({ plan }: PlanCardProps) {
     if (!sp.isCompleted) isCompleted = false;
     todayAmount += getAmountForPosition(sp.currentPosition, sp.calculatedAmountPerDay, sp.distribution);
     sp.masechetIds.forEach(id => masechetIds.add(id));
+    if (!sp.isCompleted) {
+      totalMissedDays += getMissedLearningDays(sp.lastLearningDate, today, sp.frequency);
+    }
   });
 
   const effectiveLearned = currentPosition - holesCount + preLearnedCount;
@@ -56,6 +61,12 @@ export default function PlanCard({ plan }: PlanCardProps) {
           <h3 className="text-lg font-bold text-primary-800">
             {plan.planName}
           </h3>
+          {totalMissedDays > 0 && (
+            <span className="flex items-center gap-1 bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">
+              <AlertTriangle className="w-3 h-3" />
+              {totalMissedDays}
+            </span>
+          )}
         </div>
       </div>
 
