@@ -6,6 +6,7 @@ import PlanDetailPage from './pages/PlanDetailPage';
 import LearningPage from './pages/LearningPage';
 import FreeLearningPage from './pages/FreeLearningPage';
 import CatchUpPage from './pages/CatchUpPage';
+import GroupLearningPage from './pages/GroupLearningPage';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/plan/:planId/add-subprogram" element={<NewPlanPage />} />
           <Route path="/learn/:planId/:subProgramId?" element={<LearningPage />} />
           <Route path="/catchup/:planId/:subProgramId" element={<CatchUpPage />} />
+          <Route path="/group/:groupId" element={<GroupLearningPage />} />
           <Route path="/free" element={<FreeLearningPage />} />
         </Route>
       </Routes>

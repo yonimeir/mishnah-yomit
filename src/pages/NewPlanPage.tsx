@@ -253,6 +253,36 @@ export default function NewPlanPage() {
               </div>
             </div>
           </button>
+
+          <button
+            onClick={() => { setContentType('tanakh'); setUnit('perek'); setStep('mode'); }}
+            className="card w-full text-right hover:shadow-lg transition-shadow group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-100 rounded-xl p-3 group-hover:bg-blue-200 transition-colors">
+                <BookMarked className="w-8 h-8 text-blue-700" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-primary-800">תנ"ך</h3>
+                <p className="text-sm text-gray-600">תורה, נביאים, כתובים</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => { setContentType('parasha'); setUnit('perek'); setStep('mode'); }}
+            className="card w-full text-right hover:shadow-lg transition-shadow group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-purple-100 rounded-xl p-3 group-hover:bg-purple-200 transition-colors">
+                <ScrollText className="w-8 h-8 text-purple-700" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-primary-800">פרשת שבוע</h3>
+                <p className="text-sm text-gray-600">קריאת התורה בסדר פרשות השבוע</p>
+              </div>
+            </div>
+          </button>
         </div>
       )}
 
@@ -298,8 +328,8 @@ export default function NewPlanPage() {
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-primary-800 text-center mb-4">מה תרצה ללמוד?</h2>
 
-          {/* Unit selector (not shown for rambam since only perek mode is relevant) */}
-          {contentType !== 'rambam' && (
+          {/* Unit selector (not shown for rambam/tanakh/parasha since only perek mode is currently tracking logic) */}
+          {(contentType !== 'rambam' && contentType !== 'tanakh' && contentType !== 'parasha') && (
             <div className="flex gap-2 justify-center mb-4">
               <button
                 onClick={() => setUnit('mishnah')}
@@ -331,7 +361,7 @@ export default function NewPlanPage() {
                   {contentType === 'rambam' ? 'קובץ הלכות אחד' : `${labels.bookSingular} אחת`}
                 </h3>
                 <p className="text-sm text-gray-500">
-                  {contentType === 'rambam' ? 'בחר קובץ ספציפי' : `בחר ${labels.bookSingular} ספציפית`}
+                  {(contentType === 'rambam' || contentType === 'tanakh' || contentType === 'parasha') ? `בחר ${labels.bookSingular} ספציפי` : `בחר ${labels.bookSingular} ספציפית`}
                 </p>
               </div>
             </div>

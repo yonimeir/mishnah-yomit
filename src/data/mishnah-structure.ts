@@ -1,5 +1,6 @@
 import { GEMARA_STRUCTURE } from './gemara-structure';
 import { RAMBAM_STRUCTURE } from './rambam-structure';
+import { TANAKH_STRUCTURE, PARASHOT_STRUCTURE } from './tanakh-structure';
 import { gematriya } from '../services/scheduler';
 
 export interface Masechet {
@@ -16,15 +17,17 @@ export interface Seder {
   masechtot: Masechet[];
 }
 
-export type ContentType = 'mishnah' | 'gemara' | 'rambam';
+export type ContentType = 'mishnah' | 'gemara' | 'rambam' | 'tanakh' | 'parasha';
 
 function getAllStructures(): Seder[][] {
-  return [MISHNAH_STRUCTURE, GEMARA_STRUCTURE, RAMBAM_STRUCTURE];
+  return [MISHNAH_STRUCTURE, GEMARA_STRUCTURE, RAMBAM_STRUCTURE, TANAKH_STRUCTURE, PARASHOT_STRUCTURE];
 }
 
 export function getContentType(masechetId: string): ContentType {
   if (masechetId.startsWith('g_')) return 'gemara';
   if (masechetId.startsWith('r_')) return 'rambam';
+  if (masechetId.startsWith('t_')) return 'tanakh';
+  if (masechetId.startsWith('p_')) return 'parasha';
   return 'mishnah';
 }
 
@@ -33,6 +36,8 @@ export function getStructureForType(type: ContentType): Seder[] {
     case 'mishnah': return MISHNAH_STRUCTURE;
     case 'gemara': return GEMARA_STRUCTURE;
     case 'rambam': return RAMBAM_STRUCTURE;
+    case 'tanakh': return TANAKH_STRUCTURE;
+    case 'parasha': return PARASHOT_STRUCTURE;
   }
 }
 
@@ -61,6 +66,22 @@ export function getContentTypeLabels(type: ContentType) {
       bookSingular: 'הלכות', bookPlural: 'חלקים',
       orderSingular: 'ספר', orderPlural: 'ספרים',
       allName: 'משנה תורה',
+    };
+    case 'tanakh': return {
+      name: 'תנ"ך',
+      unitSingular: 'פסוק', unitPlural: 'פסוקים',
+      chapterSingular: 'פרק', chapterPlural: 'פרקים',
+      bookSingular: 'ספר', bookPlural: 'ספרים',
+      orderSingular: 'חלק', orderPlural: 'חלקים',
+      allName: 'תנ"ך',
+    };
+    case 'parasha': return {
+      name: 'פרשת שבוע',
+      unitSingular: 'עלייה', unitPlural: 'עליות',
+      chapterSingular: 'פרשה', chapterPlural: 'פרשות',
+      bookSingular: 'חומש', bookPlural: 'חומשים',
+      orderSingular: 'תורה', orderPlural: 'תורה',
+      allName: 'כל הפרשות',
     };
   }
 }

@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { BookOpen, Trash2, RotateCcw, Play, CheckCheck, AlertTriangle, Settings, Plus } from 'lucide-react';
+import { BookOpen, Trash2, RotateCcw, Play, CheckCheck, AlertTriangle, Settings, Plus, Users } from 'lucide-react';
 import { usePlanStore, getSkippedUnitsCount, getPreLearnedUnitsCount, type SubProgram, type LearningPlan } from '../store/usePlanStore';
 import { globalToLocal, indexToRef, getUnitLabel, getContentTypeLabels, getMasechet, formatGemaraPoint, formatGemaraItem } from '../data/mishnah-structure';
 import { gematriya, getLearningItemsForDay, getAmountForPosition, getMissedLearningDays } from '../services/scheduler';
+import { createLearningGroup } from '../services/collaborative';
 import ProgressTable from '../components/ProgressTable';
 import AlreadyLearnedModal from '../components/AlreadyLearnedModal';
 import PlanSettingsModal from '../components/PlanSettingsModal';
@@ -267,13 +268,35 @@ function SubProgramSection({ plan, subProgram }: { plan: LearningPlan, subProgra
             ))}
           </div>
 
-          <button
-            onClick={() => navigate(`/learn/${plan.id}/${subProgram.id}`)}
-            className="btn-primary w-full flex items-center justify-center gap-2"
-          >
-            <Play className="w-5 h-5" />
-            התחל ללמוד במסלול זה
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate(`/learn/${plan.id}/${subProgram.id}`)}
+              className="btn-primary flex-1 flex items-center justify-center gap-2"
+            >
+              <Play className="w-5 h-5" />
+              התחל ללמוד במסלול זה
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const groupId = await createLearningGroup(
+                    plan.planName + (subProgram.name ? ' - ' + subProgram.name : ''),
+                    subProgram.contentType || 'mishnah',
+                    subProgram.unit,
+                    subProgram.masechetIds,
+                    subProgram.totalUnits
+                  );
+                  navigate(`/group/${groupId}`);
+                } catch(e) {
+                  alert('שגיאה ביצירת הקבוצה. האם הגדרת את פיירבייס כראוי?');
+                }
+              }}
+              className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 rounded-xl flex items-center justify-center font-bold text-sm transition-colors"
+              title="הפוך מסלול זה לקבוצת לימוד משותפת"
+            >
+              <Users className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       )}
 
