@@ -1,7 +1,10 @@
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, BookOpen } from 'lucide-react';
 import { usePlanStore } from '../store/usePlanStore';
 import PlanCard from '../components/PlanCard';
+import MissedDaysModal from '../components/MissedDaysModal';
+import { getMissedLearningDays } from '../services/scheduler';
 
 const STREAK_MILESTONES = [7, 14, 30, 60, 100, 180, 365];
 
@@ -26,6 +29,22 @@ export default function HomePage() {
   const completedPlans = plans.filter((p) => p.subPrograms.every(sp => sp.isCompleted));
 
   const today = new Date().toISOString().split('T')[0];
+
+  const [missedModalDismissed, setMissedModalDismissed] = useState(false);
+
+  // Find the first sub-program in any active plan that has missed learning days and has not been acknowledged today
+  const missedPlanInfo = useMemo(() => {
+    for (const plan of activePlans) {
+      for (const sp of plan.subPrograms) {
+        if (sp.isCompleted) continue;
+        const missed = getMissedLearningDays(sp.lastLearningDate, today, sp.frequency);
+        if (missed > 0 && sp.missedDaysAcknowledgedDate !== today) {
+          return { plan, subProgram: sp };
+        }
+      }
+    }
+    return null;
+  }, [activePlans, today]);
   const yesterday = (() => {
     const d = new Date(); d.setDate(d.getDate() - 1);
     return d.toISOString().split('T')[0];
@@ -60,6 +79,15 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
+      {/* Missed days modal */}
+      {missedPlanInfo && !missedModalDismissed && (
+        <MissedDaysModal
+          plan={missedPlanInfo.plan}
+          subProgram={missedPlanInfo.subProgram}
+          today={today}
+          onClose={() => setMissedModalDismissed(true)}
+        />
+      )}
       {/* Streak banner */}
       {streak > 0 && (
         <div className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${

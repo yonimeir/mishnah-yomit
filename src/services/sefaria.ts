@@ -95,8 +95,7 @@ import type { ContentType } from '../data/mishnah-structure';
 
 export const MISHNAH_COMMENTATORS = [
   { id: 'bartenura', name: 'ברטנורא', sefariaName: 'Bartenura' },
-  { id: 'tosafot_yom_tov', name: 'תוספות יום טוב', sefariaName: 'Tosafot Yom Tov' },
-  { id: 'rambam', name: 'רמב"ם', sefariaName: 'Rambam' },
+  { id: 'tiferet_yisrael', name: 'תפארת ישראל', sefariaName: 'Tiferet Yisrael' },
 ] as const;
 
 export const GEMARA_COMMENTATORS = [
@@ -108,6 +107,16 @@ export const RAMBAM_COMMENTATORS = [
   { id: 'kessef_mishneh', name: 'כסף משנה', sefariaName: 'Kessef Mishneh' },
 ] as const;
 
+export const TANAKH_COMMENTATORS = [
+  { id: 'rashi', name: 'רש"י', sefariaName: 'Rashi' },
+  { id: 'metzudat_david', name: 'מצודת דוד', sefariaName: 'Metzudat David' },
+] as const;
+
+export const PARASHA_COMMENTATORS = [
+  { id: 'rashi', name: 'רש"י', sefariaName: 'Rashi' },
+  { id: 'ramban', name: 'רמב"ן', sefariaName: 'Ramban' },
+] as const;
+
 export const COMMENTATORS = MISHNAH_COMMENTATORS;
 
 export function getCommentatorsForType(type: ContentType) {
@@ -115,6 +124,8 @@ export function getCommentatorsForType(type: ContentType) {
     case 'mishnah': return MISHNAH_COMMENTATORS;
     case 'gemara': return GEMARA_COMMENTATORS;
     case 'rambam': return RAMBAM_COMMENTATORS;
+    case 'tanakh': return TANAKH_COMMENTATORS;
+    case 'parasha': return PARASHA_COMMENTATORS;
   }
 }
 

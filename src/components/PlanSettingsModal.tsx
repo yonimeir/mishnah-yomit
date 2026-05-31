@@ -7,7 +7,7 @@ import {
   getContentTypeLabels,
   getMasechetUnits,
 } from '../data/mishnah-structure';
-import type { DistributionInfo } from '../services/scheduler';
+import { calculateByPaceScheduleMulti, type DistributionInfo } from '../services/scheduler';
 import { usePlanStore, type LearningPlan, type SubProgram } from '../store/usePlanStore';
 
 interface PlanSettingsModalProps {
@@ -107,6 +107,25 @@ function PaceSettings({
     return Math.ceil(remaining / newAmount);
   }, [newAmount, remaining]);
 
+  const newEndDateDisplay = useMemo(() => {
+    if (remaining <= 0 || !newAmount) return null;
+    try {
+      const result = calculateByPaceScheduleMulti(
+        subProgram.masechetIds,
+        subProgram.unit,
+        newAmount,
+        subProgram.frequency
+      );
+      return result.estimatedEndDate.toLocaleDateString('he-IL', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    } catch {
+      return null;
+    }
+  }, [newAmount, remaining, subProgram]);
+
   const hasChanged = newAmount !== subProgram.calculatedAmountPerDay;
 
   const handleSave = () => {
@@ -148,9 +167,17 @@ function PaceSettings({
             <p className="text-sm text-gray-500">
               כמות נוכחית: <span className="line-through">{subProgram.calculatedAmountPerDay}</span> → <span className="font-bold text-primary-700">{newAmount}</span> {unitLabel}
             </p>
+          </div>
+        )}
+
+        {/* Projected End Date */}
+        {newEndDateDisplay && (
+          <div className="mt-4 bg-primary-50 border border-primary-200 rounded-xl p-3 text-center">
+            <p className="text-xs text-gray-500 mb-0.5 font-bold">תאריך סיום משוער לקצב זה:</p>
+            <p className="font-bold text-primary-800 text-base">{newEndDateDisplay}</p>
             {newEstimate && (
-              <p className="text-xs text-gray-400">
-                עוד כ-{newEstimate} ימי לימוד לסיום ({remaining} {unitLabel} נותרו)
+              <p className="text-[10px] text-gray-400 mt-1">
+                עוד כ-{newEstimate} ימי לימוד בפועל ({remaining} {unitLabel} נותרו)
               </p>
             )}
           </div>

@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ScheduleFrequency, DistributionInfo } from '../services/scheduler';
+import {
+  calcCatchUpPace,
+  countLearningDays,
+  calculateDistribution,
+  type ScheduleFrequency,
+  type DistributionInfo,
+} from '../services/scheduler';
 import type { LearningUnit, ContentType } from '../data/mishnah-structure';
 import { scheduleReminders } from '../services/notifications';
 
@@ -616,6 +622,7 @@ export const usePlanStore = create<PlanStore>()(
             };
           })
         })),
+
 
     }),
     {

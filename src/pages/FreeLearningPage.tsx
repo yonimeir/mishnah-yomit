@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowRight, Check, ChevronDown, ChevronUp, BookOpen, ScrollText, Scale, BookCopy } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, ChevronUp, BookOpen, ScrollText, Scale, BookCopy, BookMarked } from 'lucide-react';
 import {
   type Masechet,
   type ContentType,
@@ -226,6 +226,24 @@ export default function FreeLearningPage() {
             <div className="flex items-center gap-4">
               <Scale className="w-7 h-7 text-emerald-700" />
               <h3 className="text-lg font-bold text-primary-800">רמב"ם</h3>
+            </div>
+          </button>
+          <button
+            onClick={() => { setContentType('tanakh'); setView('sedarim'); }}
+            className="card w-full text-right hover:shadow-md transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <BookMarked className="w-7 h-7 text-blue-700" />
+              <h3 className="text-lg font-bold text-primary-800">תנ"ך</h3>
+            </div>
+          </button>
+          <button
+            onClick={() => { setContentType('parasha'); setView('sedarim'); }}
+            className="card w-full text-right hover:shadow-md transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <ScrollText className="w-7 h-7 text-purple-700" />
+              <h3 className="text-lg font-bold text-primary-800">פרשת שבוע</h3>
             </div>
           </button>
         </div>

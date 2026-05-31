@@ -154,8 +154,9 @@ export default function MishnahTextDisplay({
     );
   }
 
-  // For Gemara, fromMishnah is the amud index (1 for a, 2 for b), so we just want the whole text array (all paragraphs)
-  const mishnayot = contentType === 'gemara'
+  // For Gemara, Rambam, Tanakh, and Parasha, Sefaria returns the array of paragraphs/verses for that chapter/amud/aliyah.
+  // We want to show the whole array without slicing.
+  const mishnayot = (contentType === 'gemara' || contentType === 'rambam' || contentType === 'tanakh' || contentType === 'parasha')
     ? text.hebrew
     : text.hebrew.slice(fromMishnah - 1, toMishnah);
 
